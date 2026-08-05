@@ -1,540 +1,622 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { CreditCard, Smartphone, MapPin, User, ArrowLeft, Lock } from 'lucide-react';
-import { useCart } from '../contexts/CartContext';
+import { useMemo, useState } from 'react';
+import { Link, Navigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowLeft, ArrowRight, Check, Lock, MapPin, Wallet } from 'lucide-react';
+import type { PaymentMethodId, ShippingMethodId } from '../types';
+import { DURATION, EASE } from '../constants/motion';
+import { ROUTES, STORE } from '../constants/routes';
+import { paymentMethods, shippingMethods } from '../data/catalog';
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
+import { useCartStore, resolveLines } from '../store/cart.store';
+import { useAuthStore } from '../store/auth.store';
+import { formatOrderNumber, formatPrice, formatPriceShort } from '../utils/format';
+import { cn } from '../utils/cn';
+import { Breadcrumb, Button, Input, RadioCard, Select } from '../components/ui';
+import { ProductImage } from '../components/commerce/ProductImage';
+import { Seo } from '../components/seo/Seo';
 
-const Checkout: React.FC = () => {
-  const { items, getTotalPrice, clearCart } = useCart();
-  const [selectedPayment, setSelectedPayment] = useState('card');
-  const [formData, setFormData] = useState({
-    // Informations personnelles
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    // Adresse de livraison
+/* ==========================================================================
+   Tunnel de commande en trois étapes.
+
+   L'ancienne version empilait identité, adresse, paiement et récapitulatif sur
+   une seule page de 539 lignes, sans validation, et se terminait par un
+   `alert()` natif. Trois corrections : un découpage lisible, une validation au
+   champ, et une vraie page de confirmation avec un numéro de commande.
+   ========================================================================== */
+
+const STEPS = ['Livraison', 'Paiement', 'Confirmation'] as const;
+
+const REGIONS = [
+  'Dakar',
+  'Thiès',
+  'Saint-Louis',
+  'Diourbel',
+  'Kaolack',
+  'Ziguinchor',
+  'Louga',
+  'Fatick',
+  'Kolda',
+  'Matam',
+  'Tambacounda',
+  'Kaffrine',
+  'Kédougou',
+  'Sédhiou',
+];
+
+interface FormState {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  region: string;
+  notes: string;
+}
+
+type FormErrors = Partial<Record<keyof FormState, string>>;
+
+/** Validation par champ — messages explicites, jamais « champ invalide ». */
+function validate(values: FormState): FormErrors {
+  const errors: FormErrors = {};
+
+  if (values.firstName.trim().length < 2) errors.firstName = 'Indiquez votre prénom.';
+  if (values.lastName.trim().length < 2) errors.lastName = 'Indiquez votre nom.';
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(values.email)) {
+    errors.email = 'Adresse e-mail invalide, par exemple nom@exemple.sn.';
+  }
+
+  // Numéros sénégalais : 77, 78, 76, 70 ou 75, suivis de 7 chiffres.
+  const digits = values.phone.replace(/\D/g, '');
+  if (!/^(221)?(7[05678])\d{7}$/.test(digits)) {
+    errors.phone = 'Numéro sénégalais attendu, par exemple 77 123 45 67.';
+  }
+
+  if (values.address.trim().length < 5) errors.address = 'Indiquez une adresse de livraison.';
+  if (values.city.trim().length < 2) errors.city = 'Indiquez votre ville ou quartier.';
+
+  return errors;
+}
+
+export default function Checkout() {
+  const lines = useCartStore((state) => state.lines);
+  const clear = useCartStore((state) => state.clear);
+  const user = useAuthStore((state) => state.user);
+  const addOrder = useAuthStore((state) => state.addOrder);
+  const prefersReducedMotion = usePrefersReducedMotion();
+
+  const [step, setStep] = useState(0);
+  const [values, setValues] = useState<FormState>({
+    firstName: user?.firstName ?? '',
+    lastName: user?.lastName ?? '',
+    email: user?.email ?? '',
+    phone: user?.phone ?? '',
     address: '',
-    city: '',
-    postalCode: '',
-    country: 'France',
-    // Informations de paiement
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
-    cardName: ''
+    city: user?.city ?? 'Dakar',
+    region: 'Dakar',
+    notes: '',
   });
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [touched, setTouched] = useState<Set<keyof FormState>>(new Set());
+  const [shipping, setShipping] = useState<ShippingMethodId>('domicile');
+  const [payment, setPayment] = useState<PaymentMethodId>('wave');
+  const [isSubmitting, setSubmitting] = useState(false);
+  const [orderNumber, setOrderNumber] = useState<string | null>(null);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
+  const resolved = resolveLines(lines);
+  const subtotal = resolved.reduce((total, line) => total + line.lineTotal, 0);
+  const shippingMethod = shippingMethods.find((method) => method.id === shipping)!;
+  const shippingCost =
+    subtotal >= STORE.freeShippingThreshold && shipping !== 'retrait' ? 0 : shippingMethod.price;
+  const total = subtotal + shippingCost;
+
+  const summary = useMemo(
+    () => resolved.map((line) => ({ ...line })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lines],
+  );
+
+  /* Panier vide et commande non encore passée : il n'y a rien à régler. */
+  if (resolved.length === 0 && !orderNumber) {
+    return <Navigate to={ROUTES.cart} replace />;
+  }
+
+  const setField = (key: keyof FormState, value: string) => {
+    setValues((current) => {
+      const next = { ...current, [key]: value };
+      // Revalide en direct uniquement les champs déjà quittés : afficher une
+      // erreur pendant la première frappe est agressif et contre-productif.
+      if (touched.has(key)) setErrors(validate(next));
+      return next;
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Simuler le traitement de la commande
-    alert('Commande confirmée ! Vous recevrez un email de confirmation.');
-    clearCart();
+  const blurField = (key: keyof FormState) => {
+    setTouched((current) => new Set(current).add(key));
+    setErrors(validate(values));
   };
 
-  const shippingCost = getTotalPrice() >= 50 ? 0 : 5.99;
-  const totalWithShipping = getTotalPrice() + shippingCost;
+  const goToPayment = () => {
+    const nextErrors = validate(values);
+    setErrors(nextErrors);
+    setTouched(new Set(Object.keys(values) as (keyof FormState)[]));
 
-  if (items.length === 0) {
+    if (Object.keys(nextErrors).length > 0) {
+      const firstField = Object.keys(nextErrors)[0];
+      document.getElementById(`champ-${firstField}`)?.focus();
+      return;
+    }
+    setStep(1);
+  };
+
+  const submitOrder = () => {
+    setSubmitting(true);
+    // Simulation d'appel réseau : le bouton reste occupé, comme il le ferait
+    // face à une vraie passerelle de paiement.
+    window.setTimeout(() => {
+      const reference = formatOrderNumber(Math.floor(100 + Math.random() * 8900));
+      addOrder({
+        id: reference,
+        date: new Date().toISOString(),
+        status: 'en-preparation',
+        total,
+        lines: summary.map((line) => ({
+          slug: line.slug,
+          name: line.product.name,
+          quantity: line.quantity,
+          price: line.unitPrice,
+        })),
+      });
+      setOrderNumber(reference);
+      clear();
+      setSubmitting(false);
+      setStep(2);
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    }, 1400);
+  };
+
+  /* ── Confirmation ────────────────────────────────────────────────────── */
+  if (step === 2 && orderNumber) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Votre panier est vide</h1>
-          <Link to="/boutique" className="text-electric-blue hover:underline">
-            Retour à la boutique
-          </Link>
+      <div className="container-page flex min-h-[70dvh] items-center justify-center py-16">
+        <div className="w-full max-w-lg text-center">
+          <motion.div
+            initial={prefersReducedMotion ? { opacity: 0 } : { scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: DURATION.slow, ease: EASE.spring }}
+            className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-success/40 bg-success/15"
+          >
+            {/* La coche se trace : le seul moment du site où une animation
+                dure volontairement plus de 600 ms. */}
+            <svg viewBox="0 0 24 24" className="h-9 w-9" aria-hidden="true">
+              <motion.path
+                d="M4 12.5 L9.5 18 L20 6.5"
+                fill="none"
+                stroke="rgb(var(--success))"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                initial={prefersReducedMotion ? { pathLength: 1 } : { pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ duration: 0.7, delay: 0.25, ease: EASE.outExpo }}
+              />
+            </svg>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: DURATION.slow, delay: 0.4, ease: EASE.outExpo }}
+          >
+            <h1 className="mt-8 text-display-m text-ink">Commande confirmée</h1>
+            <p className="mt-4 text-body-l text-ink-secondary">
+              Merci {values.firstName}. Nous préparons votre colis et vous appelons avant la
+              livraison.
+            </p>
+
+            <dl className="mt-8 divide-y divide-border-subtle rounded-xl border border-border bg-elevated text-left">
+              <div className="flex items-center justify-between gap-4 px-5 py-4">
+                <dt className="text-body-s text-ink-secondary">Numéro de commande</dt>
+                <dd className="font-mono text-body-s font-semibold text-ink">{orderNumber}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4 px-5 py-4">
+                <dt className="text-body-s text-ink-secondary">Total réglé</dt>
+                <dd className="tabular text-body-s font-semibold text-ink">{formatPrice(total)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4 px-5 py-4">
+                <dt className="text-body-s text-ink-secondary">Livraison</dt>
+                <dd className="text-right text-body-s text-ink">
+                  {shippingMethod.label}
+                  <span className="block text-caption text-ink-tertiary">{shippingMethod.delay}</span>
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-4 px-5 py-4">
+                <dt className="text-body-s text-ink-secondary">Paiement</dt>
+                <dd className="text-body-s text-ink">
+                  {paymentMethods.find((method) => method.id === payment)?.label}
+                </dd>
+              </div>
+            </dl>
+
+            <p className="mt-5 text-caption text-ink-tertiary">
+              Un e-mail de confirmation a été envoyé à {values.email}.
+            </p>
+
+            <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+              <Button to={ROUTES.accountOrders} size="lg">
+                Suivre ma commande
+              </Button>
+              <Button to={ROUTES.shop} size="lg" variant="secondary">
+                Continuer mes achats
+              </Button>
+            </div>
+          </motion.div>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <Link
-            to="/panier"
-            className="inline-flex items-center space-x-2 text-electric-blue hover:underline mb-4"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Retour au panier</span>
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Finaliser ma commande</h1>
-        </div>
+  /* ── Récapitulatif latéral ───────────────────────────────────────────── */
+  const orderSummary = (
+    <div className="rounded-xl border border-border bg-elevated p-6">
+      <h2 className="text-h4 text-ink">Votre commande</h2>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Formulaire de commande */}
-          <div className="space-y-6">
-            {/* Informations personnelles */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center space-x-2 mb-6">
-                <User className="h-5 w-5 text-electric-blue" />
-                <h2 className="text-xl font-semibold">Informations personnelles</h2>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Prénom *
-                  </label>
-                  <input
-                    type="text"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-electric-blue focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nom *
-                  </label>
-                  <input
-                    type="text"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-electric-blue focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-electric-blue focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Téléphone *
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-electric-blue focus:border-transparent"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Adresse de livraison */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center space-x-2 mb-6">
-                <MapPin className="h-5 w-5 text-electric-blue" />
-                <h2 className="text-xl font-semibold">Adresse de livraison</h2>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Adresse *
-                  </label>
-                  <input
-                    type="text"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-electric-blue focus:border-transparent"
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Ville *
-                    </label>
-                    <input
-                      type="text"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-electric-blue focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Code postal *
-                    </label>
-                    <input
-                      type="text"
-                      name="postalCode"
-                      value={formData.postalCode}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-electric-blue focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Pays *
-                    </label>
-                    <select
-                      name="country"
-                      value={formData.country}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-electric-blue focus:border-transparent"
-                    >
-                      <option value="France">France</option>
-                      <option value="Belgique">Belgique</option>
-                      <option value="Suisse">Suisse</option>
-                      <option value="Luxembourg">Luxembourg</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Moyens de paiement */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center space-x-2 mb-6">
-                <CreditCard className="h-5 w-5 text-electric-blue" />
-                <h2 className="text-xl font-semibold">Moyen de paiement</h2>
-              </div>
-
-              {/* Options de paiement */}
-              <div className="space-y-4 mb-6">
-                <div
-                  className={`border-2 rounded-lg p-4 cursor-pointer transition-colors ${
-                    selectedPayment === 'card' ? 'border-electric-blue bg-blue-50' : 'border-gray-200'
-                  }`}
-                  onClick={() => setSelectedPayment('card')}
-                >
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="card"
-                      checked={selectedPayment === 'card'}
-                      onChange={() => setSelectedPayment('card')}
-                      className="text-electric-blue"
-                    />
-                    <CreditCard className="h-5 w-5 text-gray-600" />
-                    <span className="font-medium">Carte bancaire</span>
-                  </div>
-                  <p className="text-sm text-gray-500 ml-8">Visa, Mastercard, American Express</p>
-                </div>
-
-                <div
-                  className={`border-2 rounded-lg p-4 cursor-pointer transition-colors ${
-                    selectedPayment === 'paypal' ? 'border-electric-blue bg-blue-50' : 'border-gray-200'
-                  }`}
-                  onClick={() => setSelectedPayment('paypal')}
-                >
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="paypal"
-                      checked={selectedPayment === 'paypal'}
-                      onChange={() => setSelectedPayment('paypal')}
-                      className="text-electric-blue"
-                    />
-                    <div className="w-5 h-5 bg-blue-600 rounded flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">P</span>
-                    </div>
-                    <span className="font-medium">PayPal</span>
-                  </div>
-                  <p className="text-sm text-gray-500 ml-8">Paiement sécurisé avec PayPal</p>
-                </div>
-
-                <div
-                  className={`border-2 rounded-lg p-4 cursor-pointer transition-colors ${
-                    selectedPayment === 'apple' ? 'border-electric-blue bg-blue-50' : 'border-gray-200'
-                  }`}
-                  onClick={() => setSelectedPayment('apple')}
-                >
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="apple"
-                      checked={selectedPayment === 'apple'}
-                      onChange={() => setSelectedPayment('apple')}
-                      className="text-electric-blue"
-                    />
-                    <Smartphone className="h-5 w-5 text-gray-600" />
-                    <span className="font-medium">Apple Pay</span>
-                  </div>
-                  <p className="text-sm text-gray-500 ml-8">Paiement rapide et sécurisé</p>
-                </div>
-
-                <div
-                  className={`border-2 rounded-lg p-4 cursor-pointer transition-colors ${
-                    selectedPayment === 'transfer' ? 'border-electric-blue bg-blue-50' : 'border-gray-200'
-                  }`}
-                  onClick={() => setSelectedPayment('transfer')}
-                >
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="transfer"
-                      checked={selectedPayment === 'transfer'}
-                      onChange={() => setSelectedPayment('transfer')}
-                      className="text-electric-blue"
-                    />
-                    <div className="w-5 h-5 bg-green-600 rounded flex items-center justify-center">
-                      <span className="text-white text-xs">€</span>
-                    </div>
-                    <span className="font-medium">Virement bancaire</span>
-                  </div>
-                  <p className="text-sm text-gray-500 ml-8">Paiement par virement SEPA</p>
-                </div>
-              </div>
-                <div
-                  className={`border-2 rounded-lg p-4 cursor-pointer transition-colors ${
-                    selectedPayment === 'wave' ? 'border-electric-blue bg-blue-50' : 'border-gray-200'
-                  }`}
-                  onClick={() => setSelectedPayment('wave')}
-                >
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="wave"
-                      checked={selectedPayment === 'wave'}
-                      onChange={() => setSelectedPayment('wave')}
-                      className="text-electric-blue"
-                    />
-                    <div className="w-5 h-5 bg-blue-500 rounded flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">W</span>
-                    </div>
-                    <span className="font-medium">Wave</span>
-                  </div>
-                  <p className="text-sm text-gray-500 ml-8">Paiement mobile sécurisé avec Wave</p>
-                </div>
-
-                <div
-                  className={`border-2 rounded-lg p-4 cursor-pointer transition-colors ${
-                    selectedPayment === 'orange' ? 'border-electric-blue bg-blue-50' : 'border-gray-200'
-                  }`}
-                  onClick={() => setSelectedPayment('orange')}
-                >
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="orange"
-                      checked={selectedPayment === 'orange'}
-                      onChange={() => setSelectedPayment('orange')}
-                      className="text-electric-blue"
-                    />
-                    <div className="w-5 h-5 bg-orange-500 rounded flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">O</span>
-                    </div>
-                    <span className="font-medium">Orange Money</span>
-                  </div>
-                  <p className="text-sm text-gray-500 ml-8">Paiement mobile avec Orange Money</p>
-                </div>
-
-              {/* Formulaire carte bancaire */}
-              {selectedPayment === 'card' && (
-                <div className="space-y-4 border-t pt-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Numéro de carte *
-                    </label>
-                    <input
-                      type="text"
-                      name="cardNumber"
-                      value={formData.cardNumber}
-                      onChange={handleInputChange}
-                      placeholder="1234 5678 9012 3456"
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-electric-blue focus:border-transparent"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Date d'expiration *
-                      </label>
-                      <input
-                        type="text"
-                        name="expiryDate"
-                        value={formData.expiryDate}
-                        onChange={handleInputChange}
-                        placeholder="MM/AA"
-                        required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-electric-blue focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        CVV *
-                      </label>
-                      <input
-                        type="text"
-                        name="cvv"
-                        value={formData.cvv}
-                        onChange={handleInputChange}
-                        placeholder="123"
-                        required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-electric-blue focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nom sur la carte *
-                    </label>
-                    <input
-                      type="text"
-                      name="cardName"
-                      value={formData.cardName}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-electric-blue focus:border-transparent"
-                    />
-                  </div>
-                </div>
+      <ul className="mt-5 flex flex-col gap-4">
+        {summary.map((line) => (
+          <li key={line.key} className="flex items-center gap-3">
+            <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md border border-border bg-sunken">
+              <ProductImage product={line.product} glow={false} />
+              <span className="tabular absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-solid px-1 text-[0.625rem] font-bold text-accent-fg">
+                {line.quantity}
+              </span>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-body-s font-medium text-ink">
+                {line.product.name}
+              </span>
+              {line.variantLabels.length > 0 && (
+                <span className="block truncate text-caption text-ink-tertiary">
+                  {line.variantLabels.join(' · ')}
+                </span>
               )}
+            </span>
+            <span className="tabular shrink-0 text-body-s text-ink">
+              {formatPriceShort(line.lineTotal)}
+            </span>
+          </li>
+        ))}
+      </ul>
 
-              {/* Formulaire Wave */}
-{selectedPayment === 'wave' && (
-  <div className="space-y-4 border-t pt-6">
-    <div className="flex items-center space-x-2">
-      <img 
-        src="https://kickstartafrica.com/wp-content/uploads/2020/12/94377508_918638458565635_5520442085410340864_o.png" 
-        alt="Wave Logo" 
-        className="h-6 w-auto" 
-      />
-      <label className="block text-sm font-medium text-gray-700">
-        Numéro de téléphone Wave *
-      </label>
-    </div>
-    <input
-      type="tel"
-      name="wavePhone"
-      placeholder="+221 XX XXX XX XX"
-      required
-      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-electric-blue focus:border-transparent"
-    />
-    <div className="bg-blue-50 p-4 rounded-lg">
-      <p className="text-sm text-blue-800">
-        📱 Vous recevrez une notification Wave pour confirmer le paiement de {totalWithShipping.toFixed(2)}€
-      </p>
-    </div>
-  </div>
-)}
-
-
-
-             {/* Formulaire Orange Money */}
-{selectedPayment === 'orange' && (
-  <div className="space-y-4 border-t pt-6">
-    <div className="flex items-center space-x-2">
-      <img 
-        src="https://yt3.ggpht.com/a/AATXAJxbPZsfcmu5uhgxzUruur3I8hf-sMLcTXhqXQ=s900-c-k-c0xffffffff-no-rj-mo" 
-        alt="Orange Money Logo" 
-        className="h-6 w-auto" 
-      />
-      <label className="block text-sm font-medium text-gray-700">
-        Numéro Orange Money *
-      </label>
-    </div>
-    <input
-      type="tel"
-      name="orangePhone"
-      placeholder="+221 XX XXX XX XX"
-      required
-      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-electric-blue focus:border-transparent"
-    />
-    <div className="bg-orange-50 p-4 rounded-lg">
-      <p className="text-sm text-orange-800">
-        📱 Composez #144# puis suivez les instructions pour valider le paiement de {totalWithShipping.toFixed(2)}€
-      </p>
-    </div>
-  </div>
-)}
-
-            </div>
-          </div>
-
-          {/* Résumé de commande */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6 sticky top-24">
-              <h2 className="text-xl font-semibold mb-6">Résumé de commande</h2>
-              
-              {/* Articles */}
-              <div className="space-y-4 mb-6">
-                {items.map((item) => (
-                  <div key={item.product.id} className="flex items-center space-x-3">
-                    <img
-                      src={item.product.image}
-                      alt={item.product.name}
-                      className="w-12 h-12 object-cover rounded"
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm">{item.product.name}</h4>
-                      <p className="text-gray-500 text-sm">Qté: {item.quantity}</p>
-                    </div>
-                    <span className="font-semibold">
-                      {(item.product.price * item.quantity).toFixed(2)}€
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Totaux */}
-              <div className="space-y-3 border-t pt-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Sous-total</span>
-                  <span className="font-semibold">{getTotalPrice().toFixed(2)}€</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Livraison</span>
-                  <span className="font-semibold">
-                    {shippingCost === 0 ? 'Gratuite' : `${shippingCost.toFixed(2)}€`}
-                  </span>
-                </div>
-                <div className="flex justify-between text-lg font-bold border-t pt-3">
-                  <span>Total</span>
-                  <span className="text-electric-blue">{totalWithShipping.toFixed(2)}€</span>
-                </div>
-              </div>
-
-              {/* Bouton de commande */}
-              <form onSubmit={handleSubmit} className="mt-6">
-                <button
-                  type="submit"
-                  className="w-full bg-electric-blue hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2"
-                >
-                  <Lock className="h-5 w-5" />
-                  <span>Confirmer ma commande</span>
-                </button>
-              </form>
-
-              <div className="mt-4 text-center">
-                <p className="text-xs text-gray-500">
-                  🔒 Paiement 100% sécurisé SSL
-                </p>
-              </div>
-            </div>
-          </div>
+      <dl className="mt-6 flex flex-col gap-3 border-t border-border-subtle pt-5">
+        <div className="flex justify-between text-body-s">
+          <dt className="text-ink-secondary">Sous-total</dt>
+          <dd className="tabular text-ink">{formatPrice(subtotal)}</dd>
         </div>
+        <div className="flex justify-between text-body-s">
+          <dt className="text-ink-secondary">Livraison</dt>
+          <dd className={cn('tabular', shippingCost === 0 ? 'text-success' : 'text-ink')}>
+            {shippingCost === 0 ? 'Offerte' : formatPrice(shippingCost)}
+          </dd>
+        </div>
+        <div className="mt-1 flex items-baseline justify-between border-t border-border-subtle pt-4">
+          <dt className="text-body font-semibold text-ink">Total</dt>
+          <dd className="tabular font-display text-h3 text-ink">{formatPrice(total)}</dd>
+        </div>
+      </dl>
+    </div>
+  );
+
+  return (
+    <div className="container-page py-8 md:py-12">
+      <Breadcrumb
+        items={[
+          { label: 'Accueil', to: ROUTES.home },
+          { label: 'Panier', to: ROUTES.cart },
+          { label: 'Commande' },
+        ]}
+      />
+
+      <Seo title="Finaliser ma commande" description="Livraison, paiement et confirmation." path="/commande" noIndex />
+      <h1 className="mt-6 text-display-l text-ink">Finaliser ma commande</h1>
+
+      {/* Étapes visuelles */}
+      <ol className="mt-10 flex items-center gap-2 sm:gap-4" aria-label="Progression de la commande">
+        {STEPS.map((label, index) => {
+          const isDone = index < step;
+          const isCurrent = index === step;
+          return (
+            <li key={label} className="flex flex-1 items-center gap-2 sm:gap-3">
+              <span
+                className={cn(
+                  'tabular flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-caption font-semibold transition-colors duration-base',
+                  isDone
+                    ? 'border-success bg-success text-carbon-950'
+                    : isCurrent
+                      ? 'border-accent bg-accent/15 text-accent-text'
+                      : 'border-border text-ink-tertiary',
+                )}
+                aria-current={isCurrent ? 'step' : undefined}
+              >
+                {isDone ? <Check className="h-4 w-4" aria-hidden="true" /> : index + 1}
+              </span>
+              <span
+                className={cn(
+                  'hidden text-body-s font-medium sm:block',
+                  isCurrent ? 'text-ink' : 'text-ink-tertiary',
+                )}
+              >
+                {label}
+              </span>
+              {index < STEPS.length - 1 && (
+                <span className="h-px flex-1 bg-border" aria-hidden="true">
+                  <motion.span
+                    className="block h-full origin-left bg-success"
+                    initial={false}
+                    animate={{ scaleX: isDone ? 1 : 0 }}
+                    transition={{ duration: DURATION.slow, ease: EASE.outExpo }}
+                  />
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+
+      <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_380px] lg:gap-14">
+        <div>
+          <AnimatePresence mode="wait">
+            {step === 0 && (
+              <motion.div
+                key="livraison"
+                initial={prefersReducedMotion ? false : { opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={prefersReducedMotion ? undefined : { opacity: 0, x: -20 }}
+                transition={{ duration: DURATION.base, ease: EASE.outExpo }}
+              >
+                <section>
+                  <h2 className="text-h3 text-ink">Vos coordonnées</h2>
+                  <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                    <Input
+                      id="champ-firstName"
+                      label="Prénom"
+                      required
+                      autoComplete="given-name"
+                      value={values.firstName}
+                      error={touched.has('firstName') ? errors.firstName : undefined}
+                      onChange={(event) => setField('firstName', event.target.value)}
+                      onBlur={() => blurField('firstName')}
+                    />
+                    <Input
+                      id="champ-lastName"
+                      label="Nom"
+                      required
+                      autoComplete="family-name"
+                      value={values.lastName}
+                      error={touched.has('lastName') ? errors.lastName : undefined}
+                      onChange={(event) => setField('lastName', event.target.value)}
+                      onBlur={() => blurField('lastName')}
+                    />
+                    <Input
+                      id="champ-email"
+                      type="email"
+                      inputMode="email"
+                      label="E-mail"
+                      required
+                      autoComplete="email"
+                      placeholder="nom@exemple.sn"
+                      value={values.email}
+                      error={touched.has('email') ? errors.email : undefined}
+                      onChange={(event) => setField('email', event.target.value)}
+                      onBlur={() => blurField('email')}
+                    />
+                    <Input
+                      id="champ-phone"
+                      type="tel"
+                      inputMode="tel"
+                      label="Téléphone"
+                      required
+                      autoComplete="tel"
+                      placeholder="77 123 45 67"
+                      hint="Pour vous prévenir avant la livraison."
+                      value={values.phone}
+                      error={touched.has('phone') ? errors.phone : undefined}
+                      onChange={(event) => setField('phone', event.target.value)}
+                      onBlur={() => blurField('phone')}
+                    />
+                  </div>
+                </section>
+
+                <section className="mt-12">
+                  <h2 className="flex items-center gap-2 text-h3 text-ink">
+                    <MapPin className="h-5 w-5 text-accent-text" aria-hidden="true" />
+                    Adresse de livraison
+                  </h2>
+                  <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                    <Input
+                      id="champ-address"
+                      label="Adresse"
+                      required
+                      autoComplete="street-address"
+                      placeholder="Rue, immeuble, repère"
+                      value={values.address}
+                      error={touched.has('address') ? errors.address : undefined}
+                      onChange={(event) => setField('address', event.target.value)}
+                      onBlur={() => blurField('address')}
+                      wrapperClassName="sm:col-span-2"
+                    />
+                    <Input
+                      id="champ-city"
+                      label="Ville ou quartier"
+                      required
+                      autoComplete="address-level2"
+                      value={values.city}
+                      error={touched.has('city') ? errors.city : undefined}
+                      onChange={(event) => setField('city', event.target.value)}
+                      onBlur={() => blurField('city')}
+                    />
+                    <Select
+                      id="champ-region"
+                      label="Région"
+                      value={values.region}
+                      onChange={(event) => setField('region', event.target.value)}
+                      options={REGIONS.map((region) => ({ value: region, label: region }))}
+                    />
+                    <Input
+                      id="champ-notes"
+                      label="Instructions de livraison"
+                      placeholder="Étage, code, point de repère…"
+                      value={values.notes}
+                      onChange={(event) => setField('notes', event.target.value)}
+                      wrapperClassName="sm:col-span-2"
+                    />
+                  </div>
+                </section>
+
+                <section className="mt-12">
+                  <h2 className="text-h3 text-ink">Mode de livraison</h2>
+                  <div className="mt-6 flex flex-col gap-3">
+                    {shippingMethods.map((method) => (
+                      <RadioCard
+                        key={method.id}
+                        name="livraison"
+                        value={method.id}
+                        checked={shipping === method.id}
+                        onChange={() => setShipping(method.id)}
+                        label={method.label}
+                        description={`${method.description} · ${method.delay}`}
+                        trailing={
+                          <span
+                            className={cn(
+                              'tabular shrink-0 text-body-s font-semibold',
+                              method.price === 0 ? 'text-success' : 'text-ink',
+                            )}
+                          >
+                            {method.price === 0 ? 'Offert' : formatPriceShort(method.price)}
+                          </span>
+                        }
+                      />
+                    ))}
+                  </div>
+                </section>
+
+                <div className="mt-10 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+                  <Button
+                    to={ROUTES.cart}
+                    variant="ghost"
+                    iconLeft={<ArrowLeft className="h-4 w-4" aria-hidden="true" />}
+                  >
+                    Retour au panier
+                  </Button>
+                  <Button
+                    onClick={goToPayment}
+                    size="lg"
+                    iconRight={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
+                  >
+                    Continuer vers le paiement
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+
+            {step === 1 && (
+              <motion.div
+                key="paiement"
+                initial={prefersReducedMotion ? false : { opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={prefersReducedMotion ? undefined : { opacity: 0, x: -20 }}
+                transition={{ duration: DURATION.base, ease: EASE.outExpo }}
+              >
+                <section>
+                  <h2 className="flex items-center gap-2 text-h3 text-ink">
+                    <Wallet className="h-5 w-5 text-accent-text" aria-hidden="true" />
+                    Moyen de paiement
+                  </h2>
+
+                  <div className="mt-6 flex flex-col gap-3">
+                    {paymentMethods.map((method) => (
+                      <RadioCard
+                        key={method.id}
+                        name="paiement"
+                        value={method.id}
+                        checked={payment === method.id}
+                        onChange={() => setPayment(method.id)}
+                        label={method.label}
+                        description={method.description}
+                        disabled={method.id === 'livraison' && values.region !== 'Dakar'}
+                      />
+                    ))}
+                  </div>
+
+                  {values.region !== 'Dakar' && (
+                    <p className="mt-4 text-caption text-ink-tertiary">
+                      Le paiement à la livraison n'est disponible qu'à Dakar et en banlieue.
+                    </p>
+                  )}
+
+                  {/* Aucune donnée de carte n'est demandée : c'est une
+                      démonstration, et faire saisir un numéro de carte dans un
+                      projet de portfolio serait une mauvaise pratique. */}
+                  <div className="mt-8 flex items-start gap-3 rounded-md border border-border bg-elevated p-4">
+                    <Lock className="mt-0.5 h-4 w-4 shrink-0 text-accent-text" aria-hidden="true" />
+                    <p className="text-caption leading-relaxed text-ink-secondary">
+                      Projet de démonstration : aucun paiement réel n'est effectué et aucune donnée
+                      bancaire n'est demandée. Sur la boutique réelle, cette étape redirige vers la
+                      passerelle sécurisée de l'opérateur choisi.
+                    </p>
+                  </div>
+                </section>
+
+                <section className="mt-12">
+                  <h2 className="text-h3 text-ink">Livraison à</h2>
+                  <div className="mt-5 rounded-md border border-border bg-elevated p-5">
+                    <p className="text-body-s font-semibold text-ink">
+                      {values.firstName} {values.lastName}
+                    </p>
+                    <p className="mt-1 text-body-s text-ink-secondary">{values.address}</p>
+                    <p className="text-body-s text-ink-secondary">
+                      {values.city}, {values.region}
+                    </p>
+                    <p className="mt-2 text-caption text-ink-tertiary">
+                      {values.phone} · {values.email}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setStep(0)}
+                      className="mt-3 cursor-pointer text-caption font-semibold text-accent-text underline-offset-4 hover:underline"
+                    >
+                      Modifier
+                    </button>
+                  </div>
+                </section>
+
+                <div className="mt-10 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+                  <Button
+                    onClick={() => setStep(0)}
+                    variant="ghost"
+                    iconLeft={<ArrowLeft className="h-4 w-4" aria-hidden="true" />}
+                  >
+                    Retour
+                  </Button>
+                  <Button onClick={submitOrder} loading={isSubmitting} size="lg">
+                    {isSubmitting ? 'Traitement en cours…' : `Payer ${formatPrice(total)}`}
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <aside className="lg:sticky lg:top-[calc(var(--header-height-compact)+2rem)] lg:self-start">
+          {orderSummary}
+          <p className="mt-4 text-center text-caption text-ink-tertiary">
+            Besoin d'aide ?{' '}
+            <Link to={ROUTES.contact} className="text-accent-text underline-offset-4 hover:underline">
+              Contactez-nous
+            </Link>
+          </p>
+        </aside>
       </div>
     </div>
   );
-};
-
-export default Checkout;
+}

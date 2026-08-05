@@ -1,111 +1,235 @@
-import React from 'react';
-import { Award, Users, Heart, Target } from 'lucide-react';
+import { useRef } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import { RotateCcw, ShieldCheck, Truck } from 'lucide-react';
+import { ROUTES, STORE } from '../constants/routes';
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
+import { formatPriceShort } from '../utils/format';
+import { Accordion, Breadcrumb, Button } from '../components/ui';
+import { CountUp, Parallax, Reveal, Stagger, StaggerItem, TextReveal } from '../components/motion';
+import { Seo } from '../components/seo/Seo';
 
-const About: React.FC = () => {
+const MILESTONES = [
+  {
+    year: '2021',
+    title: 'Une boutique, une vitrine',
+    text: "FallTech ouvre à Sacré-Cœur avec une trentaine de références et une règle simple : ne vendre que ce que l'on utiliserait soi-même.",
+  },
+  {
+    year: '2023',
+    title: 'La garantie 24 mois pour tout',
+    text: "Nous étendons la garantie à l'ensemble du catalogue, du câble au flagship. La prise en charge se fait sur place, sans envoi à l'étranger.",
+  },
+  {
+    year: '2025',
+    title: 'Livraison dans tout le Sénégal',
+    text: 'Partenariat avec un réseau de points relais à Dakar, Thiès et Saint-Louis. Les régions sont livrées sous 72 heures.',
+  },
+  {
+    year: '2026',
+    title: 'La boutique en ligne',
+    text: 'Le catalogue complet devient consultable et commandable en ligne, avec Orange Money, Wave, Free Money et le paiement à la livraison.',
+  },
+];
+
+const FAQ = [
+  {
+    id: 'garantie',
+    question: `Comment fonctionne la garantie ${STORE.warrantyMonths} mois ?`,
+    answer:
+      "Tous nos produits sont garantis 24 mois à compter de la date d'achat figurant sur la facture. En cas de panne, ramenez l'appareil en boutique : nous prenons en charge le diagnostic et la réparation. Si la réparation n'est pas possible, l'appareil est remplacé.",
+  },
+  {
+    id: 'livraison',
+    question: 'Quels sont les délais et les frais de livraison ?',
+    answer: `Dakar et sa banlieue sont livrés en 24 à 48 heures pour 3 000 F. Les autres régions sont livrées sous 72 heures. La livraison est offerte dès ${formatPriceShort(STORE.freeShippingThreshold)} d'achat. Le retrait en boutique est gratuit et disponible sous 2 heures.`,
+  },
+  {
+    id: 'retours',
+    question: `Puis-je retourner un produit ?`,
+    answer: `Oui, sous ${STORE.returnDays} jours, sans avoir à vous justifier, à condition que le produit soit dans son emballage d'origine et complet. Le remboursement est effectué sous 5 jours ouvrés par le même moyen que le paiement.`,
+  },
+  {
+    id: 'authenticite',
+    question: 'Vos produits sont-ils authentiques ?',
+    answer:
+      "Tous nos appareils sont neufs, scellés en usine, et accompagnés d'une facture. Nous ne vendons aucun produit reconditionné présenté comme neuf. Les numéros de série sont vérifiables auprès des constructeurs.",
+  },
+  {
+    id: 'paiement',
+    question: 'Quels moyens de paiement acceptez-vous ?',
+    answer:
+      'Orange Money, Wave, Free Money, carte bancaire Visa et Mastercard, et le paiement à la livraison en espèces à Dakar et en banlieue.',
+  },
+];
+
+export default function About() {
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target: timelineRef,
+    offset: ['start 70%', 'end 65%'],
+  });
+  const lineScale = useTransform(scrollYProgress, [0, 1], [0, 1]);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Hero Section */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">À propos de FallTech Store</h1>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Votre partenaire de confiance pour les technologies mobiles depuis 2020. 
-            Nous nous engageons à vous offrir les meilleurs produits et un service client exceptionnel.
-          </p>
-        </div>
-
-        {/* Story Section */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-12">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">Notre Histoire</h2>
-              <p className="text-gray-600 mb-4">
-                FallTech Store a été créé avec une mission simple : rendre la technologie mobile 
-                accessible à tous, avec des produits de qualité et un service client personnalisé.
-              </p>
-              <p className="text-gray-600 mb-4">
-                Depuis nos débuts, nous avons servi plus de 10 000 clients satisfaits et nous 
-                continuons à grandir grâce à votre confiance et vos recommandations.
-              </p>
-              <p className="text-gray-600">
-                Aujourd'hui, nous sommes fiers d'être reconnus comme l'une des boutiques 
-                de téléphones les plus fiables, offrant une garantie de 2 ans sur tous nos produits.
-              </p>
-            </div>
-            <div className="aspect-square bg-gray-100 rounded-lg">
-              <img
-                src="https://images.pexels.com/photos/3184360/pexels-photo-3184360.jpeg?auto=compress&cs=tinysrgb&w=600"
-                alt="Notre équipe"
-                className="w-full h-full object-cover rounded-lg"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Values Section */}
-        <div className="mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">Nos Valeurs</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="bg-electric-blue rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <Award className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Qualité</h3>
-              <p className="text-gray-600">
-                Nous sélectionnons uniquement les meilleurs produits pour nos clients
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="bg-electric-blue rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <Users className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Service Client</h3>
-              <p className="text-gray-600">
-                Une équipe dédiée pour vous accompagner dans vos achats
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="bg-electric-blue rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <Heart className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Confiance</h3>
-              <p className="text-gray-600">
-                Transparence et honnêteté dans toutes nos relations
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="bg-electric-blue rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <Target className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Innovation</h3>
-              <p className="text-gray-600">
-                Toujours à la pointe des dernières technologies
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Section */}
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">Nos Chiffres</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold text-electric-blue mb-2">10,000+</div>
-              <div className="text-gray-600">Clients satisfaits</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-electric-blue mb-2">500+</div>
-              <div className="text-gray-600">Produits disponibles</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-electric-blue mb-2">98%</div>
-              <div className="text-gray-600">Taux de satisfaction</div>
-            </div>
-          </div>
-        </div>
+    <div className="overflow-x-clip">
+      <div className="container-page py-8 md:py-12">
+        <Seo
+          title="À propos — FallTech Store à Dakar"
+          description="Depuis 2021 à Sacré-Cœur : produits scellés et facturés, garantie 24 mois sur tout le catalogue, livraison 48 h dans tout le Sénégal."
+          path="/a-propos"
+        />
+        <Breadcrumb items={[{ label: 'Accueil', to: ROUTES.home }, { label: 'À propos' }]} />
       </div>
+
+      {/* En-tête */}
+      <section className="relative">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[620px] -translate-x-1/2 animate-aurora-drift rounded-full bg-aurora-radial blur-3xl"
+        />
+        <div className="container-page relative pb-20 pt-6 text-center md:pb-28">
+          <p className="text-overline uppercase text-accent-text">Depuis 2021 à Dakar</p>
+          <h1 className="mx-auto mt-5 max-w-3xl text-display-l text-ink">
+            <TextReveal text="On vend de la tech." immediate className="block" />
+            <TextReveal text="Pas des promesses." immediate delay={0.18} className="block text-aurora" />
+          </h1>
+          <Reveal effect="up" delay={0.4}>
+            <p className="mx-auto mt-7 max-w-2xl text-balance text-body-l text-ink-secondary">
+              FallTech Store est né d'un constat simple : à Dakar, acheter un smartphone relevait
+              trop souvent du pari. Origine incertaine, garantie floue, service après-vente
+              inexistant. Nous avons ouvert une boutique pour que ce ne soit plus le cas.
+            </p>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Chiffres */}
+      <section className="border-y border-border-subtle bg-surface">
+        <div className="container-page grid grid-cols-2 gap-8 py-14 lg:grid-cols-4">
+          {[
+            { to: 12000, suffix: '+', label: 'clients depuis 2021' },
+            { to: 24, suffix: '', label: 'références en catalogue' },
+            { to: 98, suffix: ' %', label: 'de commandes livrées à l’heure' },
+            { to: 4.8, decimals: 1, suffix: '/5', label: 'note moyenne des avis' },
+          ].map((stat) => (
+            <Reveal key={stat.label} effect="up">
+              <div>
+                <p className="font-display text-display-m font-semibold text-ink">
+                  <CountUp to={stat.to} decimals={stat.decimals} suffix={stat.suffix} />
+                </p>
+                <p className="mt-2 text-body-s text-ink-tertiary">{stat.label}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* Chronologie */}
+      <section className="container-page py-20 md:py-28">
+        <div className="mb-14 max-w-2xl">
+          <p className="text-overline uppercase text-accent-text">Notre parcours</p>
+          <h2 className="mt-3 text-h2 text-ink">
+            <TextReveal text="Cinq ans, une seule règle" />
+          </h2>
+        </div>
+
+        <div ref={timelineRef} className="relative">
+          <div
+            aria-hidden="true"
+            className="absolute left-[7px] top-2 hidden h-[calc(100%-1rem)] w-px bg-border md:block"
+          >
+            <motion.div
+              className="h-full w-full origin-top bg-aurora"
+              style={prefersReducedMotion ? { scaleY: 1 } : { scaleY: lineScale }}
+            />
+          </div>
+
+          <ol className="flex flex-col gap-14">
+            {MILESTONES.map((milestone) => (
+              <li key={milestone.year}>
+                <Reveal effect="up">
+                  <div className="grid gap-4 md:grid-cols-[16px_1fr] md:gap-10">
+                    <span
+                      className="mt-2 hidden h-4 w-4 rounded-full border-2 border-canvas bg-accent md:block"
+                      aria-hidden="true"
+                    />
+                    <div className="max-w-2xl">
+                      <p className="font-mono text-caption font-semibold text-accent-text">
+                        {milestone.year}
+                      </p>
+                      <h3 className="mt-2 text-h3 text-ink">{milestone.title}</h3>
+                      <p className="mt-3 text-body leading-relaxed text-ink-secondary">
+                        {milestone.text}
+                      </p>
+                    </div>
+                  </div>
+                </Reveal>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* Engagements */}
+      <section className="border-y border-border-subtle bg-surface py-20 md:py-28">
+        <div className="container-page">
+          <h2 className="text-h2 text-ink">
+            <TextReveal text="Trois engagements, sans astérisque" />
+          </h2>
+
+          <Stagger className="mt-12 grid gap-6 md:grid-cols-3" stagger={0.09}>
+            {[
+              {
+                id: 'garantie',
+                icon: ShieldCheck,
+                title: `Garantie ${STORE.warrantyMonths} mois`,
+                text: 'La même durée sur un câble que sur un flagship. Prise en charge sur place, sans envoi à l’étranger.',
+              },
+              {
+                id: 'livraison',
+                icon: Truck,
+                title: 'Livraison 24 – 48 h',
+                text: `Offerte dès ${formatPriceShort(STORE.freeShippingThreshold)}. Dakar en 24 h, régions en 72 h, avec un appel avant le passage.`,
+              },
+              {
+                id: 'retours',
+                icon: RotateCcw,
+                title: `Retour sous ${STORE.returnDays} jours`,
+                text: 'Sans justification, remboursement intégral sous 5 jours ouvrés par le moyen de paiement d’origine.',
+              },
+            ].map((item) => (
+              <StaggerItem key={item.id}>
+                <div id={item.id} className="h-full rounded-xl border border-border bg-elevated p-7">
+                  <item.icon className="h-6 w-6 text-accent-text" aria-hidden="true" />
+                  <h3 className="mt-5 text-h3 text-ink">{item.title}</h3>
+                  <p className="mt-3 text-body-s leading-relaxed text-ink-secondary">{item.text}</p>
+                </div>
+              </StaggerItem>
+            ))}
+          </Stagger>
+        </div>
+      </section>
+
+      {/* Questions fréquentes */}
+      <section className="container-page py-20 md:py-28">
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,340px)_1fr] lg:gap-20">
+          <div className="lg:sticky lg:top-32 lg:self-start">
+            <p className="text-overline uppercase text-accent-text">Questions fréquentes</p>
+            <h2 className="mt-3 text-h2 text-ink">Tout ce qu'on nous demande</h2>
+            <Parallax distance={18}>
+              <p className="mt-5 text-body text-ink-secondary">
+                Une question qui n'est pas là ? Appelez-nous, on répond du lundi au samedi.
+              </p>
+            </Parallax>
+            <Button to={ROUTES.contact} variant="secondary" className="mt-7">
+              Nous contacter
+            </Button>
+          </div>
+
+          <Accordion items={FAQ} />
+        </div>
+      </section>
     </div>
   );
-};
-
-export default About;
+}

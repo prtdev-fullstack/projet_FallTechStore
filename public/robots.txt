@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Pages sans intérêt pour l'indexation : elles dépendent d'un état local
+# (panier, compte) et n'ont aucun contenu stable à référencer.
+Disallow: /panier
+Disallow: /commande
+Disallow: /compte
+Disallow: /connexion
+Disallow: /inscription
+
+Sitemap: https://falltechstore.sn/sitemap.xml

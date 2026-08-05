@@ -1,145 +1,213 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
-import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
-import { useCart } from '../contexts/CartContext';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowLeft, ShieldCheck, ShoppingBag, Trash2, Truck } from 'lucide-react';
+import { DURATION, EASE } from '../constants/motion';
+import { ROUTES, STORE } from '../constants/routes';
+import { useCartStore, resolveLines } from '../store/cart.store';
+import { formatPrice, formatPriceShort } from '../utils/format';
+import { Breadcrumb, Button, EmptyState, QuantityStepper } from '../components/ui';
+import { ProductImage } from '../components/commerce/ProductImage';
+import { Reveal, TextReveal } from '../components/motion';
+import { Seo } from '../components/seo/Seo';
 
-const Cart: React.FC = () => {
-  const { items, removeFromCart, updateQuantity, getTotalPrice, clearCart } = useCart();
+export default function Cart() {
+  const lines = useCartStore((state) => state.lines);
+  const setQuantity = useCartStore((state) => state.setQuantity);
+  const remove = useCartStore((state) => state.remove);
 
-  if (items.length === 0) {
+  const resolved = resolveLines(lines);
+  const subtotal = resolved.reduce((total, line) => total + line.lineTotal, 0);
+  const isFreeShipping = subtotal >= STORE.freeShippingThreshold;
+  const missing = Math.max(0, STORE.freeShippingThreshold - subtotal);
+  const progress = Math.min(100, (subtotal / STORE.freeShippingThreshold) * 100);
+  const itemCount = resolved.reduce((total, line) => total + line.quantity, 0);
+
+  /* Rendu dans les deux branches : sans cela, un panier vide conservait le titre
+     et l'URL canonique de la page précédente. */
+  const seo = (
+    <Seo
+      title="Mon panier"
+      description="Vérifiez votre panier avant de commander."
+      path="/panier"
+      noIndex
+    />
+  );
+
+  if (resolved.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <ShoppingBag className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Votre panier est vide</h1>
-          <p className="text-gray-600 mb-8">Découvrez nos produits et ajoutez-les à votre panier</p>
-          <Link
-            to="/boutique"
-            className="bg-electric-blue hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors"
-          >
-            Continuer les achats
-          </Link>
-        </div>
+      <div className="container-page py-8 md:py-12">
+        {seo}
+        <Breadcrumb items={[{ label: 'Accueil', to: ROUTES.home }, { label: 'Panier' }]} />
+        <EmptyState
+          titleAs="h1"
+          icon={<ShoppingBag className="h-7 w-7" aria-hidden="true" />}
+          title="Votre panier est vide"
+          description="Parcourez le catalogue : 24 références disponibles, toutes garanties 24 mois et livrées en 48 h."
+          action={
+            <Button to={ROUTES.shop} size="lg">
+              Découvrir la boutique
+            </Button>
+          }
+        />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Mon Panier</h1>
-          <p className="text-lg text-gray-600">Vérifiez vos articles avant de passer commande</p>
-        </div>
+    <div className="container-page py-8 md:py-12">
+      {seo}
+      <Breadcrumb items={[{ label: 'Accueil', to: ROUTES.home }, { label: 'Panier' }]} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Cart Items */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold">Articles ({items.length})</h2>
-                  <button
-                    onClick={clearCart}
-                    className="text-red-600 hover:text-red-700 text-sm font-medium"
-                  >
-                    Vider le panier
-                  </button>
-                </div>
+      <header className="mt-6 flex flex-wrap items-baseline justify-between gap-4">
+        <h1 className="text-display-l text-ink">
+          <TextReveal text="Mon panier" immediate />
+        </h1>
+        <p className="tabular text-body-s text-ink-tertiary">
+          {itemCount} article{itemCount > 1 ? 's' : ''}
+        </p>
+      </header>
 
-                <div className="space-y-6">
-                  {items.map((item) => (
-                    <div key={item.product.id} className="flex items-center space-x-4 border-b pb-6">
-                      <img
-                        src={item.product.image}
-                        alt={item.product.name}
-                        className="w-20 h-20 object-cover rounded-lg"
-                      />
-                      
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">{item.product.name}</h3>
-                        <p className="text-gray-600 text-sm">{item.product.price}€</p>
-                      </div>
+      <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_380px] lg:gap-14">
+        {/* Lignes */}
+        <div>
+          <ul className="divide-y divide-border-subtle border-y border-border-subtle">
+            <AnimatePresence initial={false}>
+              {resolved.map((line) => (
+                <motion.li
+                  key={line.key}
+                  layout
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: DURATION.base, ease: EASE.outExpo }}
+                  className="overflow-hidden"
+                >
+                  <div className="flex gap-4 py-6 sm:gap-6">
+                    <Link
+                      to={ROUTES.product(line.slug)}
+                      className="h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-border bg-sunken sm:h-32 sm:w-32"
+                    >
+                      <ProductImage product={line.product} glow={false} />
+                    </Link>
 
-                      <div className="flex items-center space-x-2">
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <Link
+                            to={ROUTES.product(line.slug)}
+                            className="text-h4 text-ink transition-colors duration-fast hover:text-accent-text"
+                          >
+                            {line.product.name}
+                          </Link>
+                          {line.variantLabels.length > 0 && (
+                            <p className="mt-1 text-caption text-ink-tertiary">
+                              {line.variantLabels.join(' · ')}
+                            </p>
+                          )}
+                          <p className="tabular mt-1 text-caption text-ink-tertiary">
+                            {formatPriceShort(line.unitPrice)} l'unité
+                          </p>
+                        </div>
+
                         <button
-                          onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                          className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                          type="button"
+                          onClick={() => remove(line.key)}
+                          aria-label={`Retirer ${line.product.name} du panier`}
+                          className="-m-2 h-11 w-11 shrink-0 cursor-pointer rounded-md p-2 text-ink-tertiary transition-colors duration-fast hover:bg-elevated hover:text-danger"
                         >
-                          <Minus className="h-4 w-4" />
-                        </button>
-                        <span className="w-8 text-center">{item.quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                          className="p-1 rounded-full hover:bg-gray-100 transition-colors"
-                        >
-                          <Plus className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
                         </button>
                       </div>
 
-                      <div className="text-right">
-                        <p className="font-semibold text-gray-900">
-                          {(item.product.price * item.quantity).toFixed(2)}€
-                        </p>
+                      <div className="mt-auto flex flex-wrap items-center justify-between gap-4 pt-4">
+                        <QuantityStepper
+                          value={line.quantity}
+                          max={line.product.stock}
+                          onChange={(next) => setQuantity(line.key, next)}
+                        />
+                        <motion.span
+                          key={line.lineTotal}
+                          initial={{ opacity: 0.5, y: -3 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: DURATION.fast, ease: EASE.outExpo }}
+                          className="tabular font-display text-h4 text-ink"
+                        >
+                          {formatPriceShort(line.lineTotal)}
+                        </motion.span>
                       </div>
-
-                      <button
-                        onClick={() => removeFromCart(item.product.id)}
-                        className="text-red-600 hover:text-red-700 p-1"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6 sticky top-24">
-              <h2 className="text-xl font-semibold mb-6">Résumé de la commande</h2>
-              
-              <div className="space-y-4 mb-6">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Sous-total</span>
-                  <span className="font-semibold">{getTotalPrice().toFixed(2)}€</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Livraison</span>
-                  <span className="font-semibold">
-                    {getTotalPrice() >= 50 ? 'Gratuite' : '5.99€'}
-                  </span>
-                </div>
-                <div className="border-t pt-4">
-                  <div className="flex justify-between">
-                    <span className="text-lg font-semibold">Total</span>
-                    <span className="text-lg font-semibold text-electric-blue">
-                      {(getTotalPrice() + (getTotalPrice() >= 50 ? 0 : 5.99)).toFixed(2)}€
-                    </span>
                   </div>
+                </motion.li>
+              ))}
+            </AnimatePresence>
+          </ul>
+
+          <Link
+            to={ROUTES.shop}
+            className="mt-8 inline-flex items-center gap-2 text-body-s font-semibold text-ink-secondary transition-colors duration-fast hover:text-accent-text"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Continuer mes achats
+          </Link>
+        </div>
+
+        {/* Récapitulatif — collant sur grand écran. */}
+        <aside className="lg:sticky lg:top-[calc(var(--header-height-compact)+2rem)] lg:self-start">
+          <Reveal effect="up">
+            <div className="rounded-xl border border-border bg-elevated p-6">
+              <h2 className="text-h4 text-ink">Récapitulatif</h2>
+
+              <div className="mt-5 rounded-md border border-border-subtle bg-surface p-4">
+                {isFreeShipping ? (
+                  <p className="flex items-center gap-2 text-caption font-semibold text-success">
+                    <Truck className="h-4 w-4" aria-hidden="true" />
+                    Livraison offerte
+                  </p>
+                ) : (
+                  <p className="text-caption text-ink-secondary">
+                    Plus que <strong className="tabular text-ink">{formatPriceShort(missing)}</strong>{' '}
+                    pour la livraison offerte
+                  </p>
+                )}
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-sunken">
+                  <motion.div
+                    className="h-full rounded-full bg-aurora"
+                    initial={false}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: DURATION.slow, ease: EASE.outExpo }}
+                  />
                 </div>
               </div>
 
-              <button className="w-full bg-electric-blue hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition-colors mb-4">
-                <Link to="/commande" className="block">
-                  Passer commande
-                </Link>
-              </button>
-              
-              <Link
-                to="/boutique"
-                className="block text-center text-electric-blue hover:underline"
-              >
-                Continuer les achats
-              </Link>
+              <dl className="mt-6 flex flex-col gap-3">
+                <div className="flex justify-between text-body-s">
+                  <dt className="text-ink-secondary">Sous-total</dt>
+                  <dd className="tabular text-ink">{formatPrice(subtotal)}</dd>
+                </div>
+                <div className="flex justify-between text-body-s">
+                  <dt className="text-ink-secondary">Livraison</dt>
+                  <dd className={isFreeShipping ? 'text-success' : 'text-ink-tertiary'}>
+                    {isFreeShipping ? 'Offerte' : 'Calculée à l’étape suivante'}
+                  </dd>
+                </div>
+                <div className="mt-2 flex items-baseline justify-between border-t border-border-subtle pt-4">
+                  <dt className="text-body font-semibold text-ink">Total</dt>
+                  <dd className="tabular font-display text-h3 text-ink">{formatPrice(subtotal)}</dd>
+                </div>
+              </dl>
+
+              <Button to={ROUTES.checkout} size="lg" block className="mt-6">
+                Passer commande
+              </Button>
+
+              <p className="mt-4 flex items-center justify-center gap-2 text-caption text-ink-tertiary">
+                <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                Paiement sécurisé · Garantie {STORE.warrantyMonths} mois
+              </p>
             </div>
-          </div>
-        </div>
+          </Reveal>
+        </aside>
       </div>
     </div>
   );
-};
-
-export default Cart;
+}
