@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Check, Lock, MapPin, Wallet } from 'lucide-react';
 import type { PaymentMethodId, ShippingMethodId } from '../types';
@@ -266,7 +266,7 @@ export default function Checkout() {
         {summary.map((line) => (
           <li key={line.key} className="flex items-center gap-3">
             <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md border border-border bg-sunken">
-              <ProductImage product={line.product} glow={false} />
+              <ProductImage product={line.product} size="thumb" />
               <span className="tabular absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-solid px-1 text-[0.625rem] font-bold text-accent-fg">
                 {line.quantity}
               </span>
@@ -611,9 +611,12 @@ export default function Checkout() {
           {orderSummary}
           <p className="mt-4 text-center text-caption text-ink-tertiary">
             Besoin d'aide ?{' '}
-            <Link to={ROUTES.contact} className="text-accent-text underline-offset-4 hover:underline">
-              Contactez-nous
-            </Link>
+            <a
+              href={`tel:${STORE.phone.replace(/\s/g, '')}`}
+              className="text-accent-text underline-offset-4 hover:underline"
+            >
+              {STORE.phone}
+            </a>
           </p>
         </aside>
       </div>

@@ -9,6 +9,7 @@ import { priceRange, products } from '../data/products';
 import { useDebounce } from '../hooks/useDebounce';
 import { useIsMobile } from '../hooks/useMediaQuery';
 import { formatPriceCompact, formatNumber } from '../utils/format';
+import { cn } from '../utils/cn';
 import {
   Badge,
   Breadcrumb,
@@ -21,7 +22,7 @@ import {
   Select,
 } from '../components/ui';
 import { ProductCard, ProductCardSkeleton } from '../components/commerce/ProductCard';
-import { Reveal, Stagger, StaggerItem, TextReveal } from '../components/motion';
+import { Stagger, StaggerItem } from '../components/motion';
 import { Seo, breadcrumbJsonLd } from '../components/seo/Seo';
 
 /* ==========================================================================
@@ -33,7 +34,10 @@ import { Seo, breadcrumbJsonLd } from '../components/seo/Seo';
    page.
    ========================================================================== */
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 18;
+
+/** Grille dense façon marketplace : jusqu'à 6 colonnes sur grand écran. */
+const GRID = 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6';
 
 type SortId = 'pertinence' | 'nouveautes' | 'prix-croissant' | 'prix-decroissant' | 'note';
 
@@ -275,18 +279,14 @@ export default function Shop() {
       />
       <Breadcrumb items={[{ label: 'Accueil', to: '/' }, { label: 'Boutique' }]} />
 
-      <header className="mt-6 max-w-3xl">
-        <h1 className="text-display-l text-ink">
-          <TextReveal text="Boutique" immediate />
-        </h1>
-        <Reveal effect="up" delay={0.1}>
-          <p className="mt-4 text-body-l text-ink-secondary">
-            24 références sélectionnées, toutes disponibles en boutique à Dakar et garanties 24 mois.
-          </p>
-        </Reveal>
+      <header className="mt-3 flex items-baseline justify-between gap-4">
+        <h1 className="text-h2 text-ink">Boutique</h1>
+        <p className="tabular hidden text-caption text-ink-tertiary sm:block">
+          {products.length} références · garanties 24 mois
+        </p>
       </header>
 
-      <div className="mt-10 grid gap-8 lg:mt-14 lg:grid-cols-[248px_1fr] lg:gap-10">
+      <div className="mt-5 grid gap-6 lg:grid-cols-[220px_1fr] lg:gap-8">
         {/* Colonne de filtres — masquée sous lg, remplacée par le drawer. */}
         <aside className="hidden lg:block">
           <div className="sticky top-[calc(var(--header-height-compact)+1.5rem)] max-h-[calc(100dvh-8rem)] overflow-y-auto pr-2">
@@ -376,8 +376,8 @@ export default function Shop() {
 
           {/* Grille */}
           {isPending ? (
-            <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: Math.min(PAGE_SIZE, 6) }).map((_, index) => (
+            <div className={cn('mt-4', GRID)}>
+              {Array.from({ length: Math.min(PAGE_SIZE, 12) }).map((_, index) => (
                 <ProductCardSkeleton key={index} />
               ))}
             </div>
@@ -390,11 +390,7 @@ export default function Shop() {
             />
           ) : (
             <>
-              <Stagger
-                className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3"
-                stagger={0.04}
-                amount={0.05}
-              >
+              <Stagger className={cn('mt-4', GRID)} stagger={0.02} amount={0.05}>
                 {visible.map((product, index) => (
                   <StaggerItem key={product.slug} className="h-full">
                     <ProductCard product={product} priority={index < 3} />

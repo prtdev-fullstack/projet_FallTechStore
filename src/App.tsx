@@ -19,8 +19,6 @@ const Shop = lazy(() => import('./pages/Shop'));
 const ProductDetail = lazy(() => import('./pages/ProductDetail'));
 const Cart = lazy(() => import('./pages/Cart'));
 const Checkout = lazy(() => import('./pages/Checkout'));
-const About = lazy(() => import('./pages/About'));
-const Contact = lazy(() => import('./pages/Contact'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const DesignSystem = lazy(() => import('./pages/DesignSystem'));
 
@@ -53,8 +51,6 @@ export default function App() {
             <Route path={ROUTES.productPattern} element={<ProductDetail />} />
             <Route path={ROUTES.cart} element={<Cart />} />
             <Route path={ROUTES.checkout} element={<Checkout />} />
-            <Route path={ROUTES.about} element={<About />} />
-            <Route path={ROUTES.contact} element={<Contact />} />
             <Route path={ROUTES.login} element={<Login />} />
             <Route path={ROUTES.register} element={<Register />} />
 
@@ -66,9 +62,12 @@ export default function App() {
             </Route>
 
             {/* Anciennes URL de la version précédente : on redirige plutôt que
-                de renvoyer une 404 aux liens déjà partagés. */}
+                de renvoyer une 404 aux liens déjà partagés. Les pages À propos
+                et Contact ont été retirées : leur contenu utile (garantie,
+                livraison, coordonnées) vit désormais dans le pied de page. */}
             <Route path="/boutique/*" element={<Navigate to={ROUTES.shop} replace />} />
-            <Route path="/a-propos/*" element={<Navigate to={ROUTES.about} replace />} />
+            <Route path="/a-propos" element={<Navigate to={ROUTES.home} replace />} />
+            <Route path="/contact" element={<Navigate to={ROUTES.home} replace />} />
 
             <Route path="*" element={<NotFound />} />
           </Route>

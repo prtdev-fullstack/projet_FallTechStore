@@ -87,7 +87,7 @@ export default function Cart() {
                       to={ROUTES.product(line.slug)}
                       className="h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-border bg-sunken sm:h-32 sm:w-32"
                     >
-                      <ProductImage product={line.product} glow={false} />
+                      <ProductImage product={line.product} size="thumb" />
                     </Link>
 
                     <div className="flex min-w-0 flex-1 flex-col">

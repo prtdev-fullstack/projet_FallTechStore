@@ -117,7 +117,7 @@ export function CartDrawer() {
                       onClick={close}
                       className="h-20 w-20 shrink-0 overflow-hidden rounded-md border border-border bg-sunken"
                     >
-                      <ProductImage product={line.product} glow={false} />
+                      <ProductImage product={line.product} size="thumb" />
                     </Link>
 
                     <div className="flex min-w-0 flex-1 flex-col">

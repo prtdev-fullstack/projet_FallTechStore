@@ -6,8 +6,6 @@ export const ROUTES = {
   cart: '/panier',
   checkout: '/commande',
   orderConfirmation: '/commande/confirmation',
-  about: '/a-propos',
-  contact: '/contact',
   account: '/compte',
   accountOrders: '/compte/commandes',
   accountWishlist: '/compte/favoris',
@@ -21,8 +19,6 @@ export const MAIN_NAV = [
   { label: 'Boutique', to: ROUTES.shop },
   { label: 'Nouveautés', to: `${ROUTES.shop}?tri=nouveautes` },
   { label: 'Promotions', to: `${ROUTES.shop}?promo=1` },
-  { label: 'À propos', to: ROUTES.about },
-  { label: 'Contact', to: ROUTES.contact },
 ] as const;
 
 export const FOOTER_NAV = [
@@ -34,15 +30,6 @@ export const FOOTER_NAV = [
       { label: 'Audio', to: `${ROUTES.shop}?categorie=audio` },
       { label: 'Accessoires', to: `${ROUTES.shop}?categorie=accessoires` },
       { label: 'Objets connectés', to: `${ROUTES.shop}?categorie=objets-connectes` },
-    ],
-  },
-  {
-    title: 'Aide',
-    links: [
-      { label: 'Livraison', to: `${ROUTES.about}#livraison` },
-      { label: 'Garantie 24 mois', to: `${ROUTES.about}#garantie` },
-      { label: 'Retours', to: `${ROUTES.about}#retours` },
-      { label: 'Nous contacter', to: ROUTES.contact },
     ],
   },
   {

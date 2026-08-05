@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Check,
   Heart,
@@ -45,8 +45,7 @@ import { Seo, breadcrumbJsonLd, productJsonLd } from '../components/seo/Seo';
    curseur à suivre, et le pincement natif fait déjà le travail.
    ========================================================================== */
 
-function Gallery({ product, color }: { product: ReturnType<typeof productBySlug.get> & object; color?: string }) {
-  const [view, setView] = useState(0);
+function Gallery({ product }: { product: ReturnType<typeof productBySlug.get> & object }) {
   const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const isTouch = useIsTouch();
@@ -61,70 +60,32 @@ function Gallery({ product, color }: { product: ReturnType<typeof productBySlug.
   };
 
   return (
-    <div className="flex flex-col-reverse gap-4 lg:flex-row">
-      {/* Miniatures */}
-      {product.gallery > 1 && (
-        <div
-          role="tablist"
-          aria-label="Vues du produit"
-          className="mask-fade-x flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] lg:flex-col lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden"
-        >
-          {Array.from({ length: product.gallery }).map((_, index) => (
-            <button
-              key={index}
-              role="tab"
-              type="button"
-              aria-selected={view === index}
-              aria-label={`Vue ${index + 1} sur ${product.gallery}`}
-              onClick={() => setView(index)}
-              className={cn(
-                'h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded-md border bg-sunken transition-all duration-fast ease-out-expo lg:h-20 lg:w-20',
-                view === index
-                  ? 'border-accent shadow-glow'
-                  : 'border-border hover:border-border-strong',
-              )}
-            >
-              <ProductImage product={product} view={index} color={color} glow={false} />
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Vue principale */}
+    <div
+      ref={frameRef}
+      onMouseMove={onMouseMove}
+      onMouseLeave={() => setZoom(null)}
+      className="relative aspect-square overflow-hidden rounded-xl border border-border bg-sunken"
+    >
       <div
-        ref={frameRef}
-        onMouseMove={onMouseMove}
-        onMouseLeave={() => setZoom(null)}
-        className="relative aspect-square flex-1 overflow-hidden rounded-xl border border-border bg-sunken"
+        className="absolute inset-0"
+        style={
+          zoom
+            ? {
+                transform: 'scale(1.9)',
+                transformOrigin: `${zoom.x}% ${zoom.y}%`,
+                transition: 'transform 220ms cubic-bezier(0.16,1,0.3,1)',
+              }
+            : { transform: 'scale(1)', transition: 'transform 320ms cubic-bezier(0.16,1,0.3,1)' }
+        }
       >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={view}
-            initial={{ opacity: 0, scale: 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.02 }}
-            transition={{ duration: DURATION.base, ease: EASE.outExpo }}
-            className="absolute inset-0"
-            style={
-              zoom
-                ? {
-                    transform: 'scale(1.9)',
-                    transformOrigin: `${zoom.x}% ${zoom.y}%`,
-                    transition: 'transform 220ms cubic-bezier(0.16,1,0.3,1)',
-                  }
-                : { transform: 'scale(1)', transition: 'transform 320ms cubic-bezier(0.16,1,0.3,1)' }
-            }
-          >
-            <ProductImage product={product} view={view} color={color} priority />
-          </motion.div>
-        </AnimatePresence>
-
-        {!isTouch && (
-          <p className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-border bg-surface/80 px-3 py-1.5 text-caption text-ink-tertiary backdrop-blur-md">
-            Survolez pour agrandir
-          </p>
-        )}
+        <ProductImage product={product} priority />
       </div>
+
+      {!isTouch && (
+        <p className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-border bg-surface/80 px-3 py-1.5 text-caption text-ink-tertiary backdrop-blur-md">
+          Survolez pour agrandir
+        </p>
+      )}
     </div>
   );
 }
@@ -168,9 +129,6 @@ export default function ProductDetail() {
     ? product.originalPrice + (unitPrice - product.price)
     : undefined;
   const discount = originalUnitPrice ? discountPercent(originalUnitPrice, unitPrice) : 0;
-  const selectedColor = product.variantGroups
-    .find((group) => group.id === 'couleur')
-    ?.options.find((option) => option.id === variants.couleur)?.swatch;
 
   const isOutOfStock = product.stock === 0;
   const isLowStock = product.stock > 0 && product.stock <= 8;
@@ -183,7 +141,7 @@ export default function ProductDetail() {
       description: `${product.name} × ${quantity}`,
       thumbnail: (
         <span className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-sunken">
-          <ProductImage product={product} color={selectedColor} glow={false} />
+          <ProductImage product={product} size="thumb" />
         </span>
       ),
       action: { label: 'Voir le panier', onClick: openCart },
@@ -250,7 +208,7 @@ export default function ProductDetail() {
         <div className="mt-8 grid gap-10 lg:grid-cols-2 lg:gap-14">
           {/* Galerie — collante sur grand écran pendant qu'on lit la fiche. */}
           <div className="lg:sticky lg:top-[calc(var(--header-height-compact)+2rem)] lg:self-start">
-            <Gallery product={product} color={selectedColor} />
+            <Gallery product={product} />
           </div>
 
           {/* Informations */}

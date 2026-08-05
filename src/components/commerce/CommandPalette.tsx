@@ -256,7 +256,7 @@ export function CommandPalette() {
                           >
                             {product ? (
                               <span className="h-11 w-11 shrink-0 overflow-hidden rounded-md border border-border bg-sunken">
-                                <ProductImage product={product} glow={false} />
+                                <ProductImage product={product} size="thumb" />
                               </span>
                             ) : (
                               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-border bg-sunken text-ink-tertiary">

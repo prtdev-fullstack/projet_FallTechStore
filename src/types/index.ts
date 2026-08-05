@@ -81,11 +81,15 @@ export interface Product {
   releasedAt: string;
   /** Mis en avant sur la page d'accueil. */
   featured?: boolean;
-  /** Nombre de vues sur les cartes de la galerie du produit. */
-  gallery: number;
   /**
-   * Photo réelle si elle existe dans /public/products/<slug>-<n>.webp.
-   * Sinon, le composant ProductImage produit un rendu vectoriel de marque.
+   * Unités vendues — alimente le tri « meilleures ventes » et le repère social
+   * affiché sur la carte produit (« 1,2k vendus »), comme sur les marketplaces.
+   */
+  sold?: number;
+  /**
+   * Photo réelle disponible dans /public/products/<slug>.webp (et
+   * <slug>-thumb.webp pour les vignettes). Tout le catalogue en dispose ;
+   * le champ reste optionnel pour couvrir un futur ajout sans visuel.
    */
   hasPhotos?: boolean;
 }

@@ -168,9 +168,6 @@ export function Footer() {
             © {new Date().getFullYear()} {STORE.name}. {STORE.tagline}
           </p>
           <p className="flex items-center gap-4">
-            <Link to={ROUTES.about} className="tap-safe transition-colors hover:text-ink-secondary">
-              Mentions légales
-            </Link>
             <Link to={ROUTES.designSystem} className="tap-safe transition-colors hover:text-ink-secondary">
               Design System
             </Link>
