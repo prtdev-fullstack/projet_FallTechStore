@@ -1,0 +1,232 @@
+/* ==========================================================================
+   FallTech Store — Base, utilitaires et composants transverses
+   ========================================================================== */
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: rgb(var(--border));
+  }
+
+  html {
+    /* Lenis gère le défilement : on désactive le smooth natif pour éviter
+       les deux moteurs qui se battent. Réactivé si l'utilisateur a demandé
+       la réduction du mouvement (voir plus bas). */
+    scroll-behavior: auto;
+    -webkit-text-size-adjust: 100%;
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    background-color: rgb(var(--canvas));
+    color: rgb(var(--text-primary));
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.65;
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Posée par applyTheme() le temps d'un basculement de thème : le changement
+     est instantané et aucune transition ne peut rester figée sur l'ancienne
+     couleur. Voir src/store/ui.store.ts. */
+  .theme-switching *,
+  .theme-switching *::before,
+  .theme-switching *::after {
+    transition: none !important;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Les chiffres ne « sautent » plus quand une quantité ou un prix change. */
+  :is(input, output, td, .tabular) {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Anneau de focus unique, visible uniquement au clavier. */
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background-color: rgb(var(--accent) / 0.3);
+    color: rgb(var(--text-primary));
+  }
+
+  /* Barre de défilement discrète, cohérente avec le thème. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgb(var(--canvas));
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--border-strong));
+    border-radius: 999px;
+    border: 2px solid rgb(var(--canvas));
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--carbon-500));
+  }
+
+  img,
+  video {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Accessibilité : on coupe tout le mouvement, sans casser les mises en page. */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: smooth;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Conteneur de page — une seule source de vérité pour la gouttière. */
+  .container-page {
+    width: 100%;
+    max-width: var(--container-max);
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+  @media (min-width: 768px) {
+    .container-page {
+      padding-inline: 2rem;
+    }
+  }
+  @media (min-width: 1280px) {
+    .container-page {
+      padding-inline: 3rem;
+    }
+  }
+
+  /* Lien d'évitement — première tabulation de la page. */
+  .skip-link {
+    position: fixed;
+    top: 0.75rem;
+    left: 0.75rem;
+    z-index: 200;
+    transform: translateY(-160%);
+    background-color: rgb(var(--accent-solid));
+    color: rgb(var(--accent-fg));
+    padding: 0.75rem 1.25rem;
+    border-radius: 12px;
+    font-weight: 600;
+    transition: transform var(--duration-fast) var(--ease-out-expo);
+  }
+  .skip-link:focus-visible {
+    transform: translateY(0);
+  }
+
+  /* Surface vitrée — header, drawers, palette ⌘K. */
+  .glass {
+    background-color: rgb(var(--surface) / 0.72);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgb(var(--border) / 0.8);
+  }
+
+  /* Bordure en dégradé Aurora, sans pseudo-élément supplémentaire. */
+  .border-aurora {
+    border: 1px solid transparent;
+    background:
+      linear-gradient(rgb(var(--elevated)), rgb(var(--elevated))) padding-box,
+      linear-gradient(
+          115deg,
+          rgb(var(--aurora-violet)),
+          rgb(var(--aurora-blue)),
+          rgb(var(--aurora-cyan)),
+          rgb(var(--aurora-mint))
+        )
+        border-box;
+  }
+
+  /* Texte rempli par le dégradé signature. */
+  .text-aurora {
+    background-image: linear-gradient(
+      115deg,
+      rgb(var(--aurora-violet)),
+      rgb(var(--aurora-blue)) 38%,
+      rgb(var(--aurora-cyan)) 70%,
+      rgb(var(--aurora-mint))
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+@layer utilities {
+  /* Halo Aurora derrière un produit ou un titre. */
+  .glow-aurora {
+    position: relative;
+    isolation: isolate;
+  }
+  .glow-aurora::before {
+    content: '';
+    position: absolute;
+    inset: -20%;
+    z-index: -1;
+    background-image: radial-gradient(
+      50% 50% at 50% 50%,
+      rgb(var(--aurora-blue) / 0.35) 0%,
+      rgb(var(--aurora-violet) / 0.18) 45%,
+      transparent 72%
+    );
+    filter: blur(28px);
+    pointer-events: none;
+  }
+
+  /* Grain — casse le banding des grands aplats sombres. */
+  .grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Masque de fondu latéral — marquees et carrousels. */
+  .mask-fade-x {
+    -webkit-mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+    mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+  }
+
+  /* Réservé au lecteur d'écran. */
+  .sr-only-focusable:not(:focus):not(:focus-within) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}

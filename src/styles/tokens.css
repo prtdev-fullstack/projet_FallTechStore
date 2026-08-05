@@ -1,0 +1,196 @@
+/* ==========================================================================
+   FallTech Store — Design Tokens « Carbon & Aurora »
+   --------------------------------------------------------------------------
+   Toutes les valeurs sont exprimées en canaux RVB séparés par des espaces
+   (« 79 125 255 ») afin que Tailwind puisse générer les variantes d'opacité
+   via rgb(var(--token) / <alpha-value>) — ex. bg-accent/20.
+
+   Aucune couleur n'est écrite en dur dans les composants : le passage
+   clair / sombre se fait exclusivement en réassignant les tokens sémantiques.
+   ========================================================================== */
+
+:root {
+  /* ────────────────────────────────────────────────────────────────────
+     1. PRIMITIVES — échelle neutre « Carbon »
+     ──────────────────────────────────────────────────────────────────── */
+  --carbon-950: 5 6 10;        /* #05060A */
+  --carbon-900: 10 12 18;      /* #0A0C12 */
+  --carbon-850: 16 19 25;      /* #101319 */
+  --carbon-800: 22 26 35;      /* #161A23 */
+  --carbon-750: 28 33 43;      /* #1C212B */
+  --carbon-700: 35 40 51;      /* #232833 */
+  --carbon-600: 58 65 80;      /* #3A4150 */
+  --carbon-500: 107 114 128;   /* #6B7280 */
+  --carbon-400: 133 141 155;   /* #858D9B */
+  --carbon-300: 161 168 181;   /* #A1A8B5 */
+  --carbon-200: 199 204 214;   /* #C7CCD6 */
+  --carbon-100: 227 231 238;   /* #E3E7EE */
+  --carbon-50:  244 246 250;   /* #F4F6FA */
+  --white:      255 255 255;
+
+  /* ────────────────────────────────────────────────────────────────────
+     2. PRIMITIVES — accent « Ion »
+     Trois rôles distincts, choisis pour respecter les contrastes WCAG :
+       ion-400 → texte et liens sur fond sombre   (7.5:1 sur carbon-950)
+       ion-500 → couleur d'identité : halos, bordures, anneau de focus
+       ion-600 → aplats de bouton avec texte blanc (5.2:1)
+     ──────────────────────────────────────────────────────────────────── */
+  --ion-300: 157 186 255;      /* #9DBAFF */
+  --ion-400: 110 155 255;      /* #6E9BFF */
+  --ion-500: 79 125 255;       /* #4F7DFF */
+  --ion-600: 59 99 224;        /* #3B63E0 */
+  --ion-700: 43 75 184;        /* #2B4BB8 */
+
+  /* ────────────────────────────────────────────────────────────────────
+     3. PRIMITIVES — dégradé signature « Aurora »
+     Strictement décoratif : ne porte jamais de texte.
+     ──────────────────────────────────────────────────────────────────── */
+  --aurora-violet: 109 93 252;  /* #6D5DFC */
+  --aurora-blue:   79 125 255;  /* #4F7DFF */
+  --aurora-cyan:   0 194 255;   /* #00C2FF */
+  --aurora-mint:   18 225 176;  /* #12E1B0 */
+
+  /* ────────────────────────────────────────────────────────────────────
+     4. PRIMITIVES — « Amber », réservé au commerce
+     Promotions, prix barrés, stock faible, urgence. Jamais ailleurs :
+     c'est ce qui permet à l'œil d'apprendre que bleu = action, ambre = affaire.
+     ──────────────────────────────────────────────────────────────────── */
+  --amber-400: 255 196 77;     /* #FFC44D */
+  --amber-500: 255 176 32;     /* #FFB020 — 10.9:1 sur carbon-950 */
+  --amber-600: 224 144 16;     /* #E09010 */
+
+  /* ────────────────────────────────────────────────────────────────────
+     5. PRIMITIVES — sémantique
+     ──────────────────────────────────────────────────────────────────── */
+  --success-500: 18 225 176;   /* #12E1B0 */
+  --warning-500: 255 176 32;   /* #FFB020 */
+  --danger-500:  255 90 95;    /* #FF5A5F */
+  --danger-600:  214 58 63;    /* #D63A3F */
+
+  /* ────────────────────────────────────────────────────────────────────
+     6. TYPOGRAPHIE
+     ──────────────────────────────────────────────────────────────────── */
+  --font-display: 'Clash Display', 'Inter Variable', system-ui, sans-serif;
+  --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+
+  /* ────────────────────────────────────────────────────────────────────
+     7. MOUVEMENT — durées et courbes partagées JS ↔ CSS
+     ──────────────────────────────────────────────────────────────────── */
+  --duration-instant: 120ms;
+  --duration-fast: 200ms;
+  --duration-base: 320ms;
+  --duration-slow: 560ms;
+  --duration-cinematic: 900ms;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);   /* courbe signature */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* micro-interactions */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ────────────────────────────────────────────────────────────────────
+     8. MISE EN PAGE
+     ──────────────────────────────────────────────────────────────────── */
+  --container-max: 1280px;
+  --header-height: 72px;
+  --header-height-compact: 60px;
+}
+
+/* ==========================================================================
+   THÈME SOMBRE — thème par défaut de FallTech Store
+   ========================================================================== */
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --canvas: var(--carbon-950);
+  --surface: var(--carbon-900);
+  --elevated: var(--carbon-850);
+  --elevated-hover: var(--carbon-800);
+  --sunken: 2 3 6;
+
+  /* Bordures */
+  --border: var(--carbon-700);
+  --border-subtle: var(--carbon-800);
+  --border-strong: var(--carbon-600);
+
+  /* Texte */
+  --text-primary: var(--carbon-50);     /* 18.2:1 — AAA */
+  --text-secondary: var(--carbon-300);  /*  8.4:1 — AAA */
+  --text-tertiary: var(--carbon-500);   /*  3.6:1 — texte non essentiel uniquement */
+  --text-inverse: var(--carbon-950);
+
+  /* Accent */
+  --accent: var(--ion-500);             /* identité : halos, bordures, focus */
+  --accent-solid: var(--ion-600);       /* aplat de bouton + texte blanc */
+  --accent-solid-hover: var(--ion-500);
+  --accent-text: var(--ion-400);        /* liens et texte accentués */
+  --accent-fg: var(--white);            /* texte posé sur --accent-solid */
+  --accent-soft: var(--ion-500);        /* à utiliser avec une opacité faible */
+
+  /* Commerce */
+  --promo: var(--amber-500);
+  --promo-fg: var(--carbon-950);        /* texte sombre sur l'ambre — 10.9:1 */
+
+  /* Sémantique */
+  --success: var(--success-500);
+  --warning: var(--warning-500);
+  --danger: var(--danger-500);
+
+  /* Ombres — sur fond sombre, l'ombre est une absence de lumière : très opaque */
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-2: 0 8px 24px -8px rgb(0 0 0 / 0.65);
+  --shadow-3: 0 24px 64px -16px rgb(0 0 0 / 0.75);
+  --shadow-glow: 0 0 0 1px rgb(var(--ion-500) / 0.4), 0 8px 32px rgb(var(--ion-500) / 0.18);
+  --shadow-glow-promo: 0 0 0 1px rgb(var(--amber-500) / 0.35), 0 8px 32px rgb(var(--amber-500) / 0.15);
+
+  --overlay: 5 6 10;
+  --overlay-opacity: 0.7;
+
+  /* Voile de bruit — casse le banding des grands aplats sombres */
+  --grain-opacity: 0.035;
+}
+
+/* ==========================================================================
+   THÈME CLAIR
+   Ce n'est pas une simple inversion : les ombres redeviennent douces, les
+   accents se foncent pour conserver le contraste sur fond blanc.
+   ========================================================================== */
+[data-theme='light'] {
+  color-scheme: light;
+
+  --canvas: var(--white);
+  --surface: 246 248 252;               /* #F6F8FC */
+  --elevated: var(--white);
+  --elevated-hover: 250 251 253;
+  --sunken: 240 243 248;
+
+  --border: 227 232 240;                /* #E3E8F0 */
+  --border-subtle: 238 241 246;
+  --border-strong: 205 212 224;
+
+  --text-primary: var(--carbon-900);    /* 17.5:1 */
+  --text-secondary: 71 79 94;           /*  8.1:1 */
+  --text-tertiary: var(--carbon-500);
+  --text-inverse: var(--carbon-50);
+
+  --accent: var(--ion-600);
+  --accent-solid: var(--ion-600);
+  --accent-solid-hover: var(--ion-700);
+  --accent-text: var(--ion-700);        /* 7.5:1 sur blanc — AAA */
+  --accent-fg: var(--white);
+
+  --promo: var(--amber-600);
+  --promo-fg: var(--white);
+
+  --shadow-1: 0 1px 2px rgb(10 12 18 / 0.06);
+  --shadow-2: 0 8px 24px -8px rgb(10 12 18 / 0.12);
+  --shadow-3: 0 24px 64px -16px rgb(10 12 18 / 0.16);
+  --shadow-glow: 0 0 0 1px rgb(var(--ion-600) / 0.3), 0 8px 32px rgb(var(--ion-600) / 0.12);
+  --shadow-glow-promo: 0 0 0 1px rgb(var(--amber-600) / 0.3), 0 8px 32px rgb(var(--amber-600) / 0.12);
+
+  --overlay: 10 12 18;
+  --overlay-opacity: 0.45;
+
+  --grain-opacity: 0.02;
+}

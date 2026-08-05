@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CreditCard, Smartphone, MapPin, User, Mail, Phone, ArrowLeft, Lock } from 'lucide-react';
+import { CreditCard, Smartphone, MapPin, User, ArrowLeft, Lock } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 
 const Checkout: React.FC = () => {

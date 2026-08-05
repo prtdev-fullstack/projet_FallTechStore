@@ -1,3 +1,21 @@
+/* ==========================================================================
+   FallTech Store — Point d'entrée CSS
+
+   Tous les @import sont regroupés en tête : la spec CSS les invalide ailleurs,
+   et postcss-import les ignorerait silencieusement. L'ordre d'application reste
+   correct car globals.css déclare son contenu dans @layer base / components /
+   utilities — c'est Tailwind qui le replace au bon endroit en aval.
+   ========================================================================== */
+
+/* Polices auto-hébergées — déclarations complètes dans fonts.css. */
+@import './styles/fonts.css';
+
+/* Variables de design : doivent exister avant que Tailwind ne les consomme. */
+@import './styles/tokens.css';
+
+/* Base, composants et utilitaires maison, déclarés dans leurs @layer. */
+@import './styles/globals.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
