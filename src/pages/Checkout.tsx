@@ -365,7 +365,7 @@ export default function Checkout() {
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_380px] lg:gap-14">
         <div>
-          <AnimatePresence mode="wait">
+          <AnimatePresence>
             {step === 0 && (
               <motion.div
                 key="livraison"

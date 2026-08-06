@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { DURATION, EASE } from '../constants/motion';
 import { useSmoothScroll } from '../hooks/useSmoothScroll';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
@@ -50,20 +50,27 @@ export function RootLayout() {
       <Header />
 
       <main id="contenu" className="flex-1">
-        {/* `mode="wait"` : la page sortante s'efface avant l'entrée de la
-            suivante. Sans cela, les deux se superposent et la hauteur du
-            document saute pendant la transition. */}
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={location.pathname}
-            initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={prefersReducedMotion ? undefined : { opacity: 0, y: -8 }}
-            transition={{ duration: DURATION.base, ease: EASE.outExpo }}
-          >
-            <Outlet />
-          </motion.div>
-        </AnimatePresence>
+        {/* Pas d'AnimatePresence ici : avec `mode="wait"`, le nouveau contenu
+            n'apparaît qu'une fois l'animation de sortie de l'ancien terminée.
+            Si cette confirmation de fin d'animation n'arrive jamais — onglet
+            en arrière-plan, fenêtre non focalisée, tout ce qui met en pause
+            requestAnimationFrame — la page reste bloquée sur l'ancien
+            contenu indéfiniment, jusqu'à un rechargement complet. C'est
+            exactement le bug rapporté : clic sur un produit, rien ne
+            s'affiche tant qu'on n'actualise pas.
+
+            Ici, le changement de `key` démonte l'ancienne page et monte la
+            nouvelle immédiatement, via la réconciliation React normale,
+            sans dépendre d'aucune animation. Le fondu d'entrée reste, mais
+            il ne peut plus jamais bloquer l'affichage. */}
+        <motion.div
+          key={location.pathname}
+          initial={prefersReducedMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: DURATION.fast, ease: EASE.outExpo }}
+        >
+          <Outlet />
+        </motion.div>
       </main>
 
       <Footer />
