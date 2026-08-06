@@ -62,7 +62,7 @@ function PromoBanner() {
         <Link
           to={`${ROUTES.shop}?promo=1`}
           aria-label="Voir toutes les promotions"
-          className="hidden self-end sm:block"
+          className="hidden self-end -mb-6 sm:block md:-mb-8"
         >
           <img
             src="/promo-femme.webp"
