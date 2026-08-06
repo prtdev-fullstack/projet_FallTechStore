@@ -26,8 +26,10 @@ dist-ssr
 dist
 
 # Sources brutes deposees dans public/ avant optimisation (photos, videos non
-# compressees). Seuls les fichiers traites (public/video/, public/products/)
-# sont suivis : le brut alourdirait l'historique Git sans jamais etre servi.
+# compressees). Seuls les fichiers traites (public/video/, public/products/,
+# public/promo-femme.webp, public/logo*.png) sont suivis : le brut alourdirait
+# l'historique Git sans jamais etre servi.
 public/*.mp4
 public/*.mov
+public/femme.png
 

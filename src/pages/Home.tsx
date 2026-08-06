@@ -57,31 +57,21 @@ function PromoBanner() {
           </Link>
         </div>
 
+        {/* Étonnée, elle pointe vers le texte de l'offre à sa gauche — la
+            photo et la mise en page se répondent, ce n'est pas un hasard. */}
         <Link
-          to={ROUTES.product(hero.slug)}
-          className="group flex items-center gap-4 rounded-lg border border-border bg-elevated p-4 transition-colors hover:border-border-strong"
+          to={`${ROUTES.shop}?promo=1`}
+          aria-label="Voir toutes les promotions"
+          className="hidden self-end sm:block"
         >
-          <span className="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-sunken sm:h-24 sm:w-24">
-            <ProductImage product={hero} size="thumb" priority />
-          </span>
-          <span className="min-w-0">
-            <span className="line-clamp-1 block text-body-s font-semibold text-ink">{hero.name}</span>
-            <span className="mt-1 flex items-baseline gap-2">
-              <span className="tabular text-h4 font-bold text-ink">{formatPriceShort(hero.price)}</span>
-              {hero.originalPrice && (
-                <span className="tabular text-caption text-ink-tertiary line-through">
-                  {formatPriceShort(hero.originalPrice)}
-                </span>
-              )}
-            </span>
-            <span className="mt-1 inline-flex items-center gap-1 text-caption font-semibold text-accent-text">
-              Voir l'offre
-              <ArrowRight
-                className="h-3 w-3 transition-transform group-hover:translate-x-0.5"
-                aria-hidden="true"
-              />
-            </span>
-          </span>
+          <img
+            src="/promo-femme.webp"
+            alt=""
+            aria-hidden="true"
+            width={488}
+            height={700}
+            className="h-40 w-auto object-contain object-bottom md:h-48 lg:h-56"
+          />
         </Link>
       </div>
     </section>
