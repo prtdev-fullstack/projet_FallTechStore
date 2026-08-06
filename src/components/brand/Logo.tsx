@@ -29,7 +29,7 @@ export function Logo({ className, asLink = true }: LogoProps) {
         aria-hidden="true"
         width={416}
         height={220}
-        className="block h-9 w-auto shrink-0 dark:hidden"
+        className="block h-12 w-auto shrink-0 dark:hidden"
       />
       <img
         src="/logo-mark-dark.png"
@@ -37,7 +37,7 @@ export function Logo({ className, asLink = true }: LogoProps) {
         aria-hidden="true"
         width={416}
         height={220}
-        className="hidden h-9 w-auto shrink-0 dark:block"
+        className="hidden h-12 w-auto shrink-0 dark:block"
       />
       <span className="sr-only">FallTech Store, retour à l'accueil</span>
     </span>
