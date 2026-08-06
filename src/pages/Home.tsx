@@ -83,8 +83,11 @@ function PromoBanner() {
 function CategoryStrip() {
   return (
     <section className="border-b border-border-subtle">
-      <div className="container-page py-4">
-        <div className="mask-fade-x -mx-5 flex gap-3 overflow-x-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="container-page py-6 md:py-8">
+        {/* Grille pleine largeur, pas de bandeau défilant : 4 catégories,
+            donc 4 colonnes dès sm — chacune occupe sa juste part de la
+            section plutôt qu'une pastille de 104px perdue dans l'espace. */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
           {categories.map((category) => {
             const sample = products.find((p) => p.category === category.id)!;
             const count = products.filter((p) => p.category === category.id).length;
@@ -92,13 +95,17 @@ function CategoryStrip() {
               <Link
                 key={category.id}
                 to={`${ROUTES.shop}?categorie=${category.id}`}
-                className="group flex w-[104px] shrink-0 flex-col items-center gap-2 rounded-md border border-transparent p-2 text-center transition-colors hover:border-border hover:bg-elevated"
+                className="group flex flex-col overflow-hidden rounded-lg border border-border bg-elevated transition-colors hover:border-border-strong hover:shadow-2"
               >
-                <span className="h-16 w-16 overflow-hidden rounded-full bg-sunken transition-transform duration-fast group-hover:scale-105">
-                  <ProductImage product={sample} size="thumb" />
+                <span className="flex aspect-square items-center justify-center overflow-hidden bg-sunken p-6 sm:p-8">
+                  <span className="block h-full w-full transition-transform duration-base ease-out-expo group-hover:scale-110">
+                    <ProductImage product={sample} size="thumb" />
+                  </span>
                 </span>
-                <span className="line-clamp-1 text-caption font-medium text-ink">{category.name}</span>
-                <span className="tabular text-[0.6875rem] text-ink-tertiary">{count} produits</span>
+                <span className="flex flex-col gap-0.5 p-4">
+                  <span className="text-h4 text-ink">{category.name}</span>
+                  <span className="tabular text-caption text-ink-tertiary">{count} produits</span>
+                </span>
               </Link>
             );
           })}
