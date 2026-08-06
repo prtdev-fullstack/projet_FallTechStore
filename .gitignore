@@ -24,3 +24,10 @@ dist-ssr
 *.sw?
 .env
 dist
+
+# Sources brutes deposees dans public/ avant optimisation (photos, videos non
+# compressees). Seuls les fichiers traites (public/video/, public/products/)
+# sont suivis : le brut alourdirait l'historique Git sans jamais etre servi.
+public/*.mp4
+public/*.mov
+

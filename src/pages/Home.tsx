@@ -8,6 +8,7 @@ import { cn } from '../utils/cn';
 import { CountUp, Marquee, Reveal, Stagger, StaggerItem } from '../components/motion';
 import { ProductCard } from '../components/commerce/ProductCard';
 import { ProductImage } from '../components/commerce/ProductImage';
+import { VideoHero } from '../components/commerce/VideoHero';
 import { Seo, storeJsonLd } from '../components/seo/Seo';
 
 /* ==========================================================================
@@ -254,6 +255,7 @@ export default function Home() {
         jsonLd={storeJsonLd}
       />
 
+      <VideoHero />
       <PromoBanner />
       <CategoryStrip />
 
