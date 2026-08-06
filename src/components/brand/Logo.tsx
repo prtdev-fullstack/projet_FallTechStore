@@ -10,19 +10,25 @@ interface LogoProps {
 }
 
 /**
- * Monogramme « F/ » : le F de FallTech, la barre oblique pour la vitesse et le
- * chemin de fichier. La barre porte le dégradé Aurora — c'est le seul endroit
- * du site où le dégradé apparaît en permanence.
+ * Monogramme « FT » — fourni par l'utilisateur (public/logo.png), recadré et
+ * optimisé en public/logo-mark.png (482×184, 18 Ko, fond transparent).
+ *
+ * Le mot-symbole « FallTech / STORE » reste du texte dans la couleur de
+ * l'interface (`text-ink`), pas une partie de l'image : le dégradé chromé de
+ * l'image d'origine perd tout contraste sur fond blanc en thème clair, alors
+ * que du texte theme-adaptatif reste lisible dans les deux thèmes.
  */
 export function Logo({ variant = 'full', className, asLink = true }: LogoProps) {
   const content = (
-    <span className={cn('inline-flex items-center gap-2.5', className)}>
-      <span
+    <span className={cn('inline-flex items-center gap-2', className)}>
+      <img
+        src="/logo-mark.png"
+        alt=""
         aria-hidden="true"
-        className="font-display text-[1.375rem] font-bold leading-none text-ink"
-      >
-        F<span className="text-aurora">/</span>
-      </span>
+        width={482}
+        height={184}
+        className="h-7 w-auto shrink-0"
+      />
       {variant === 'full' && (
         <span className="flex flex-col leading-none">
           <span className="font-display text-body font-semibold tracking-tight text-ink">
