@@ -257,7 +257,7 @@ export default function Home() {
       <CategoryStrip />
 
       <Reveal effect="fade">
-        <Shelf icon={Zap} title="Bons plans du jour" to={`${ROUTES.shop}?promo=1`} items={dealsOfTheDay.slice(0, 12)} />
+        <Shelf icon={Zap} title="Bons plans du jour" to={`${ROUTES.shop}?promo=1`} items={dealsOfTheDay.slice(0, 6)} />
       </Reveal>
 
       <TrustStrip />
@@ -267,7 +267,7 @@ export default function Home() {
           icon={Sparkles}
           title="Meilleures ventes"
           to={`${ROUTES.shop}?tri=pertinence`}
-          items={bestSellers.slice(0, 12)}
+          items={bestSellers.slice(0, 6)}
         />
       </Reveal>
 
@@ -278,7 +278,7 @@ export default function Home() {
           icon={ArrowRight}
           title="Nouveautés"
           to={`${ROUTES.shop}?tri=nouveautes`}
-          items={newArrivals.slice(0, 12)}
+          items={newArrivals.slice(0, 6)}
         />
       </Reveal>
 
