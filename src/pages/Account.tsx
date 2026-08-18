@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, Navigate, Outlet } from 'react-router-dom';
 import { Heart, LogOut, Package, User as UserIcon } from 'lucide-react';
+import type { Order } from '../types';
 import { ROUTES } from '../constants/routes';
-import { productBySlug } from '../data/products';
 import { useAuthStore } from '../store/auth.store';
+import { useCatalogStore, productBySlugMap } from '../store/catalog.store';
 import { useWishlistStore } from '../store/wishlist.store';
+import { api } from '../lib/api';
 import { formatDate, formatPrice } from '../utils/format';
 import { cn } from '../utils/cn';
-import { Badge, Breadcrumb, Button, EmptyState, Input } from '../components/ui';
+import { Badge, Breadcrumb, Button, EmptyState, Input, Skeleton } from '../components/ui';
 import { toast } from '../components/ui/Toast';
 import { ProductCard } from '../components/commerce/ProductCard';
 import { Reveal, Stagger, StaggerItem, TextReveal } from '../components/motion';
@@ -99,7 +101,27 @@ const STATUS_LABEL = {
 };
 
 export function AccountOrders() {
-  const orders = useAuthStore((state) => state.orders);
+  const email = useAuthStore((state) => state.user?.email);
+  const [orders, setOrders] = useState<Order[] | null>(null);
+
+  useEffect(() => {
+    if (!email) return;
+    setOrders(null);
+    api
+      .get<Order[]>(`/orders/by-email/${encodeURIComponent(email)}`)
+      .then(setOrders)
+      .catch(() => setOrders([]));
+  }, [email]);
+
+  if (orders === null) {
+    return (
+      <div className="flex flex-col gap-5">
+        {[0, 1].map((i) => (
+          <Skeleton key={i} className="h-40 rounded-xl" />
+        ))}
+      </div>
+    );
+  }
 
   if (orders.length === 0) {
     return (
@@ -157,6 +179,8 @@ export function AccountOrders() {
 
 export function AccountWishlist() {
   const slugs = useWishlistStore((state) => state.slugs);
+  const catalog = useCatalogStore((state) => state.products);
+  const productBySlug = useMemo(() => productBySlugMap(catalog), [catalog]);
   const products = slugs.map((slug) => productBySlug.get(slug)).filter(Boolean);
 
   if (products.length === 0) {

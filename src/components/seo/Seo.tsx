@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { STORE } from '../../constants/routes';
+import { useSettingsStore, type StoreSettings } from '../../store/settings.store';
 
 /* ==========================================================================
    Métadonnées de page et données structurées.
@@ -51,9 +51,10 @@ function setTag(
 }
 
 export function Seo({ title, description, path = '', type = 'website', jsonLd, noIndex }: SeoProps) {
+  const storeName = useSettingsStore((state) => state.settings.name);
   // Le nom du site n'est ajouté que s'il n'y figure pas déjà : évite
   // « FallTech Store — FallTech Store » sur la page d'accueil.
-  const fullTitle = title.includes(STORE.name) ? title : `${title} — ${STORE.name}`;
+  const fullTitle = title.includes(storeName) ? title : `${title} — ${storeName}`;
   const canonical = `${SITE_URL}${path}`;
   const serializedJsonLd = jsonLd ? JSON.stringify(Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : '';
 
@@ -102,26 +103,31 @@ export function Seo({ title, description, path = '', type = 'website', jsonLd, n
 
 /* ── Constructeurs de données structurées ──────────────────────────────── */
 
-/** Identité de la boutique — injectée une fois, depuis la page d'accueil. */
-export const storeJsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'Store',
-  name: STORE.name,
-  slogan: STORE.tagline,
-  url: SITE_URL,
-  telephone: STORE.phone,
-  email: STORE.email,
-  priceRange: '8 000 – 1 540 000 FCFA',
-  currenciesAccepted: 'XOF',
-  paymentAccepted: 'Orange Money, Wave, Free Money, Carte bancaire, Espèces',
-  openingHours: 'Mo-Sa 09:00-20:00',
-  address: {
-    '@type': 'PostalAddress',
-    streetAddress: STORE.address,
-    addressLocality: STORE.city,
-    addressCountry: 'SN',
-  },
-};
+/** Identité de la boutique — injectée depuis la page d'accueil, à partir des
+ *  paramètres courants (voir settings.store.ts) plutôt que d'une constante
+ *  figée, pour qu'une modification faite dans l'admin se reflète dans les
+ *  données structurées lues par les moteurs de recherche. */
+export function buildStoreJsonLd(settings: StoreSettings) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Store',
+    name: settings.name,
+    slogan: settings.tagline,
+    url: SITE_URL,
+    telephone: settings.phone,
+    email: settings.email,
+    priceRange: '8 000 – 1 540 000 FCFA',
+    currenciesAccepted: 'XOF',
+    paymentAccepted: 'Orange Money, Wave, Free Money, Carte bancaire, Espèces',
+    openingHours: 'Mo-Sa 09:00-20:00',
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: settings.address,
+      addressLocality: settings.city,
+      addressCountry: 'SN',
+    },
+  };
+}
 
 export function productJsonLd(product: {
   name: string;

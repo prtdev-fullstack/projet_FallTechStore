@@ -68,6 +68,21 @@
   --danger-600:  214 58 63;    /* #D63A3F */
 
   /* ────────────────────────────────────────────────────────────────────
+     5b. PRIMITIVES — catégoriel data-viz (admin)
+     Distinct des rôles ci-dessus par construction : jamais l'ambre (réservé
+     au commerce), jamais le succès/danger (réservés au statut), jamais le
+     dégradé Aurora (ses arrêts sont trop proches en clarté pour se
+     distinguer une fois désaturé — validé par scripts/validate_palette.js
+     du skill dataviz, échec sur la paire violet/bleu). Ordre fixe à
+     assigner dans cet ordre, jamais cyclé : 4 identités passent tous les
+     tests CVD/luminosité.
+     ──────────────────────────────────────────────────────────────────── */
+  --viz-1: 42 120 214;    /* #2A78D6 — bleu */
+  --viz-2: 235 104 52;    /* #EB6834 — orange */
+  --viz-3: 27 175 122;    /* #1BAF7A — aqua */
+  --viz-4: 237 161 0;     /* #EDA100 — or */
+
+  /* ────────────────────────────────────────────────────────────────────
      6. TYPOGRAPHIE
      ──────────────────────────────────────────────────────────────────── */
   --font-display: 'Clash Display', 'Inter Variable', system-ui, sans-serif;
@@ -96,93 +111,48 @@
 }
 
 /* ==========================================================================
-   THÈME SOMBRE — thème par défaut de FallTech Store
+   THÈME — clair uniquement (voir décision produit : FallTech Store n'a plus
+   de mode sombre, seul le blanc est proposé).
    ========================================================================== */
-:root,
-[data-theme='dark'] {
-  color-scheme: dark;
-
-  /* Surfaces */
-  --canvas: var(--carbon-950);
-  --surface: var(--carbon-900);
-  --elevated: var(--carbon-850);
-  --elevated-hover: var(--carbon-800);
-  --sunken: 2 3 6;
-
-  /* Bordures */
-  --border: var(--carbon-700);
-  --border-subtle: var(--carbon-800);
-  --border-strong: var(--carbon-600);
-
-  /* Texte */
-  --text-primary: var(--carbon-50);     /* 18.2:1 — AAA */
-  --text-secondary: var(--carbon-300);  /*  8.4:1 — AAA */
-  --text-tertiary: var(--carbon-500);   /*  3.6:1 — texte non essentiel uniquement */
-  --text-inverse: var(--carbon-950);
-
-  /* Accent */
-  --accent: var(--ion-500);             /* identité : halos, bordures, focus */
-  --accent-solid: var(--ion-600);       /* aplat de bouton + texte blanc */
-  --accent-solid-hover: var(--ion-500);
-  --accent-text: var(--ion-400);        /* liens et texte accentués */
-  --accent-fg: var(--white);            /* texte posé sur --accent-solid */
-  --accent-soft: var(--ion-500);        /* à utiliser avec une opacité faible */
-
-  /* Commerce */
-  --promo: var(--amber-500);
-  --promo-fg: var(--carbon-950);        /* texte sombre sur l'ambre — 10.9:1 */
-
-  /* Sémantique */
-  --success: var(--success-500);
-  --warning: var(--warning-500);
-  --danger: var(--danger-500);
-
-  /* Ombres — sur fond sombre, l'ombre est une absence de lumière : très opaque */
-  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.5);
-  --shadow-2: 0 8px 24px -8px rgb(0 0 0 / 0.65);
-  --shadow-3: 0 24px 64px -16px rgb(0 0 0 / 0.75);
-  --shadow-glow: 0 0 0 1px rgb(var(--ion-500) / 0.4), 0 8px 32px rgb(var(--ion-500) / 0.18);
-  --shadow-glow-promo: 0 0 0 1px rgb(var(--amber-500) / 0.35), 0 8px 32px rgb(var(--amber-500) / 0.15);
-
-  --overlay: 5 6 10;
-  --overlay-opacity: 0.7;
-
-  /* Voile de bruit — casse le banding des grands aplats sombres */
-  --grain-opacity: 0.035;
-}
-
-/* ==========================================================================
-   THÈME CLAIR
-   Ce n'est pas une simple inversion : les ombres redeviennent douces, les
-   accents se foncent pour conserver le contraste sur fond blanc.
-   ========================================================================== */
-[data-theme='light'] {
+:root {
   color-scheme: light;
 
+  /* Surfaces */
   --canvas: var(--white);
   --surface: 246 248 252;               /* #F6F8FC */
   --elevated: var(--white);
   --elevated-hover: 250 251 253;
   --sunken: 240 243 248;
 
+  /* Bordures */
   --border: 227 232 240;                /* #E3E8F0 */
   --border-subtle: 238 241 246;
   --border-strong: 205 212 224;
 
+  /* Texte */
   --text-primary: var(--carbon-900);    /* 17.5:1 */
   --text-secondary: 71 79 94;           /*  8.1:1 */
   --text-tertiary: var(--carbon-500);
   --text-inverse: var(--carbon-50);
 
-  --accent: var(--ion-600);
-  --accent-solid: var(--ion-600);
+  /* Accent */
+  --accent: var(--ion-600);             /* identité : halos, bordures, focus */
+  --accent-solid: var(--ion-600);       /* aplat de bouton + texte blanc */
   --accent-solid-hover: var(--ion-700);
   --accent-text: var(--ion-700);        /* 7.5:1 sur blanc — AAA */
-  --accent-fg: var(--white);
+  --accent-fg: var(--white);            /* texte posé sur --accent-solid */
+  --accent-soft: var(--ion-500);        /* à utiliser avec une opacité faible */
 
+  /* Commerce */
   --promo: var(--amber-600);
   --promo-fg: var(--white);
 
+  /* Sémantique */
+  --success: var(--success-500);
+  --warning: var(--warning-500);
+  --danger: var(--danger-500);
+
+  /* Ombres */
   --shadow-1: 0 1px 2px rgb(10 12 18 / 0.06);
   --shadow-2: 0 8px 24px -8px rgb(10 12 18 / 0.12);
   --shadow-3: 0 24px 64px -16px rgb(10 12 18 / 0.16);

@@ -5,7 +5,6 @@ const token = (name) => `rgb(var(--${name}) / <alpha-value>)`;
 
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
-  darkMode: ['class', '[data-theme="dark"]'],
   theme: {
     extend: {
       colors: {
@@ -43,6 +42,14 @@ export default {
         success: token('success'),
         warning: token('warning'),
         danger: token('danger'),
+
+        /* Catégoriel data-viz (admin) — ordre fixe, voir tokens.css §5b */
+        viz: {
+          1: token('viz-1'),
+          2: token('viz-2'),
+          3: token('viz-3'),
+          4: token('viz-4'),
+        },
 
         /* ── Primitives : réservées au Design System et aux dégradés ── */
         carbon: {

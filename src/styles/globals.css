@@ -30,15 +30,6 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Posée par applyTheme() le temps d'un basculement de thème : le changement
-     est instantané et aucune transition ne peut rester figée sur l'ancienne
-     couleur. Voir src/store/ui.store.ts. */
-  .theme-switching *,
-  .theme-switching *::before,
-  .theme-switching *::after {
-    transition: none !important;
-  }
-
   h1,
   h2,
   h3,
@@ -237,6 +228,28 @@
   }
   @media (min-width: 1024px) {
     .tap-safe::after {
+      display: none;
+    }
+  }
+
+  /* Étend la zone de frappe d'un bouton icône carré à 44×44 px minimum, sans
+     agrandir le bouton visible. Réservé aux boutons compacts des grilles
+     denses (favoris et panier sur les cartes produit, contrôles du panier) :
+     la densité marketplace impose des icônes de 32 px, mais la cible tactile
+     réelle doit rester conforme (WCAG 2.5.5) même si l'œil ne la voit pas. */
+  .tap-target {
+    position: relative;
+  }
+  .tap-target::after {
+    content: '';
+    position: absolute;
+    inset: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+  @media (min-width: 1024px) {
+    .tap-target::after {
       display: none;
     }
   }

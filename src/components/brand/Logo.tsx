@@ -12,13 +12,10 @@ interface LogoProps {
  * mot-symbole « FALL TECH STORE » déjà intégrés à l'image — aucun texte
  * séparé n'est donc rendu à côté.
  *
- * Deux variantes recolorées à partir du même tracé (public/logo-mark-light.png
- * et -dark.png, générées depuis public/logo.png) : le texte marine d'origine
- * a un contraste de ~1,2:1 sur notre fond sombre quasi noir — pratiquement
- * invisible. La variante sombre reprend exactement les mêmes formes avec le
- * marine remplacé par l'ink clair du thème ; l'ambre, déjà lisible sur les
- * deux fonds, reste inchangé dans les deux fichiers. Le bon fichier s'affiche
- * via la variante `dark:` de Tailwind, câblée sur `data-theme`.
+ * Variante recolorée à partir du tracé d'origine (public/logo-mark-light.png,
+ * générée depuis public/logo.png) : le texte marine d'origine a un contraste
+ * trop faible sur certains fonds, cette version le corrige. Le site n'ayant
+ * qu'un seul thème (clair), c'est la seule variante nécessaire.
  */
 export function Logo({ className, asLink = true }: LogoProps) {
   const content = (
@@ -29,15 +26,7 @@ export function Logo({ className, asLink = true }: LogoProps) {
         aria-hidden="true"
         width={416}
         height={220}
-        className="block h-12 w-auto shrink-0 dark:hidden"
-      />
-      <img
-        src="/logo-mark-dark.png"
-        alt=""
-        aria-hidden="true"
-        width={416}
-        height={220}
-        className="hidden h-12 w-auto shrink-0 dark:block"
+        className="block h-12 w-auto shrink-0"
       />
       <span className="sr-only">FallTech Store, retour à l'accueil</span>
     </span>

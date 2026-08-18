@@ -67,7 +67,8 @@ export const paymentMethods: PaymentMethod[] = [
   },
   { id: 'wave', label: 'Wave', description: 'Paiement instantané, sans frais' },
   { id: 'free-money', label: 'Free Money', description: 'Débit immédiat sur votre compte' },
-  { id: 'carte', label: 'Carte bancaire', description: 'Visa et Mastercard, paiement sécurisé 3-D Secure' },
+  { id: 'visa', label: 'Visa', description: 'Paiement sécurisé par carte, 3-D Secure' },
+  { id: 'mastercard', label: 'Mastercard', description: 'Paiement sécurisé par carte, 3-D Secure' },
   {
     id: 'livraison',
     label: 'Paiement à la livraison',

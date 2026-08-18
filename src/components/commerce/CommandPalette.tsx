@@ -6,7 +6,7 @@ import { ArrowRight, CornerDownLeft, Search, TrendingUp } from 'lucide-react';
 import { DURATION, EASE } from '../../constants/motion';
 import { MAIN_NAV, ROUTES } from '../../constants/routes';
 import { brandById } from '../../data/catalog';
-import { products } from '../../data/products';
+import { useCatalogStore } from '../../store/catalog.store';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
@@ -41,14 +41,21 @@ interface Result {
   productSlug?: string;
 }
 
-const searchIndex = products.map((product) => ({
-  product,
-  haystack: normalize(
-    [product.name, brandById.get(product.brandId)?.name ?? '', product.tagline, product.category].join(' '),
-  ),
-}));
-
 export function CommandPalette() {
+  const products = useCatalogStore((state) => state.products);
+  const searchIndex = useMemo(
+    () =>
+      products.map((product) => ({
+        product,
+        haystack: normalize(
+          [product.name, brandById.get(product.brandId)?.name ?? '', product.tagline, product.category].join(
+            ' ',
+          ),
+        ),
+      })),
+    [products],
+  );
+
   const isOpen = useUIStore((state) => state.isCommandOpen);
   const setOpen = useUIStore((state) => state.setCommandOpen);
   const toggle = useUIStore((state) => state.toggleCommand);
@@ -121,7 +128,7 @@ export function CommandPalette() {
     );
 
     return [...productMatches, ...pageMatches];
-  }, [debouncedQuery]);
+  }, [debouncedQuery, products, searchIndex]);
 
   useEffect(() => setActiveIndex(0), [debouncedQuery]);
 

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" data-theme="dark">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,8 +9,7 @@
       name="description"
       content="Smartphones, accessoires et objets connectés authentiques, garantis 24 mois. Livraison 48h à Dakar et dans tout le Sénégal. Paiement Orange Money, Wave, carte ou à la livraison."
     />
-    <meta name="theme-color" content="#05060A" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#FFFFFF" />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
@@ -35,23 +34,6 @@
     <meta property="og:locale" content="fr_SN" />
     <meta name="twitter:card" content="summary_large_image" />
 
-    <script>
-      // Anti-FOUC : on applique le thème avant le premier rendu, donc avant que
-      // React ne démarre. Sans cela, un utilisateur en thème clair voit un
-      // flash noir à chaque chargement.
-      (function () {
-        try {
-          var stored = localStorage.getItem('falltech-ui');
-          var theme = stored && JSON.parse(stored).state && JSON.parse(stored).state.theme;
-          if (theme !== 'light' && theme !== 'dark') {
-            theme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-          }
-          document.documentElement.setAttribute('data-theme', theme);
-        } catch (e) {
-          document.documentElement.setAttribute('data-theme', 'dark');
-        }
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>

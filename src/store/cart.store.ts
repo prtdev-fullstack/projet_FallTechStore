@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { CartLine, Product } from '../types';
-import { productBySlug } from '../data/products';
 
 /* ==========================================================================
    Panier.
@@ -118,7 +117,14 @@ export const useCartStore = create<CartState>()(
    redessinait tout l'arbre à chaque mutation.
    ──────────────────────────────────────────────────────────────────────── */
 
-export function resolveLines(lines: CartLine[]): ResolvedCartLine[] {
+/**
+ * Prend le catalogue en argument (plutôt qu'un import statique) : les prix et
+ * le stock viennent désormais du catalogue éditable (`catalog.store`), et
+ * doivent donc pouvoir varier d'un appel à l'autre — une modification faite
+ * depuis l'admin doit se refléter dans le panier sans rechargement.
+ */
+export function resolveLines(lines: CartLine[], products: Product[]): ResolvedCartLine[] {
+  const productBySlug = new Map(products.map((product) => [product.slug, product]));
   return lines.flatMap((line) => {
     const product = productBySlug.get(line.slug);
     // Un produit retiré du catalogue ne doit pas faire planter le panier.
@@ -134,9 +140,6 @@ export function resolveLines(lines: CartLine[]): ResolvedCartLine[] {
 
 export const selectItemCount = (state: CartState): number =>
   state.lines.reduce((total, line) => total + line.quantity, 0);
-
-export const selectSubtotal = (state: CartState): number =>
-  resolveLines(state.lines).reduce((total, line) => total + line.lineTotal, 0);
 
 /** Vrai si ce produit, dans cette combinaison, est déjà au panier. */
 export const selectHasLine =

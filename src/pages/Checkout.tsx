@@ -1,17 +1,21 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Check, Lock, MapPin, Wallet } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, CreditCard, Lock, MapPin, Smartphone, Wallet } from 'lucide-react';
 import type { PaymentMethodId, ShippingMethodId } from '../types';
 import { DURATION, EASE } from '../constants/motion';
-import { ROUTES, STORE } from '../constants/routes';
+import { ROUTES } from '../constants/routes';
 import { paymentMethods, shippingMethods } from '../data/catalog';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
+import { getLenis } from '../hooks/useSmoothScroll';
 import { useCartStore, resolveLines } from '../store/cart.store';
+import { useCatalogStore } from '../store/catalog.store';
+import { useSettingsStore } from '../store/settings.store';
 import { useAuthStore } from '../store/auth.store';
+import { useOrdersStore } from '../store/orders.store';
 import { formatOrderNumber, formatPrice, formatPriceShort } from '../utils/format';
 import { cn } from '../utils/cn';
-import { Breadcrumb, Button, Input, RadioCard, Select } from '../components/ui';
+import { Breadcrumb, Button, Input, RadioCard, Select, toast } from '../components/ui';
 import { ProductImage } from '../components/commerce/ProductImage';
 import { Seo } from '../components/seo/Seo';
 
@@ -25,6 +29,39 @@ import { Seo } from '../components/seo/Seo';
    ========================================================================== */
 
 const STEPS = ['Livraison', 'Paiement', 'Confirmation'] as const;
+
+// Logos affichés à côté de chaque moyen de paiement (voir
+// scripts/import-payment-logos.mjs) — absent de la liste, ou fichier
+// manquant : la carte garde simplement son intitulé, sans casser l'affichage.
+const PAYMENT_LOGOS: Partial<Record<PaymentMethodId, string[]>> = {
+  'orange-money': ['orange-money'],
+  wave: ['wave'],
+  visa: ['visa'],
+  mastercard: ['mastercard'],
+};
+
+function PaymentLogos({ slugs }: { slugs: string[] }) {
+  const [failed, setFailed] = useState<Record<string, boolean>>({});
+
+  return (
+    <span className="flex shrink-0 items-center gap-1.5">
+      {slugs.map((slug) =>
+        failed[slug] ? null : (
+          <img
+            key={slug}
+            src={`/payments/${slug}.webp`}
+            alt=""
+            aria-hidden="true"
+            width={160}
+            height={80}
+            onError={() => setFailed((current) => ({ ...current, [slug]: true }))}
+            className="h-6 w-auto object-contain"
+          />
+        ),
+      )}
+    </span>
+  );
+}
 
 const REGIONS = [
   'Dakar',
@@ -42,6 +79,90 @@ const REGIONS = [
   'Kédougou',
   'Sédhiou',
 ];
+
+// Selon le moyen choisi, l'étape paiement demande soit les infos de carte,
+// soit un numéro pour la demande de confirmation mobile — jamais les deux,
+// jamais rien pour le paiement à la livraison.
+const CARD_METHODS: PaymentMethodId[] = ['visa', 'mastercard'];
+const MOBILE_METHODS: PaymentMethodId[] = ['orange-money', 'wave', 'free-money'];
+
+interface PaymentDetailsState {
+  cardName: string;
+  cardNumber: string;
+  cardExpiry: string;
+  cardCvv: string;
+  mobileNumber: string;
+}
+
+type PaymentErrors = Partial<Record<keyof PaymentDetailsState, string>>;
+
+/** Regroupe les chiffres par 4 au fil de la frappe — « 4242 4242 4242 4242 »
+ *  plutôt qu'un bloc illisible, jusqu'à 19 chiffres (longueur maximale d'un
+ *  numéro de carte réel). */
+function formatCardNumber(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 19);
+  return (digits.match(/.{1,4}/g) ?? []).join(' ');
+}
+
+/** « MM/AA » au fil de la frappe, sans que l'utilisateur ait à taper le
+ *  séparateur lui-même. */
+function formatExpiry(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 4);
+  return digits.length <= 2 ? digits : `${digits.slice(0, 2)}/${digits.slice(2)}`;
+}
+
+/** Somme de contrôle standard des numéros de carte — un numéro qui échoue ce
+ *  test est structurellement invalide, quelle que soit la carte. Ne prouve
+ *  pas qu'une carte existe ou est débitable : seulement que sa forme est
+ *  plausible, comme le ferait tout formulaire de paiement réel côté client. */
+function passesLuhnCheck(digits: string): boolean {
+  let sum = 0;
+  let double = false;
+  for (let i = digits.length - 1; i >= 0; i -= 1) {
+    let d = Number(digits[i]);
+    if (double) {
+      d *= 2;
+      if (d > 9) d -= 9;
+    }
+    sum += d;
+    double = !double;
+  }
+  return sum % 10 === 0;
+}
+
+function validatePayment(payment: PaymentMethodId, details: PaymentDetailsState): PaymentErrors {
+  const errors: PaymentErrors = {};
+
+  if (CARD_METHODS.includes(payment)) {
+    if (details.cardName.trim().length < 2) errors.cardName = 'Indiquez le nom inscrit sur la carte.';
+
+    const digits = details.cardNumber.replace(/\D/g, '');
+    if (digits.length < 13 || digits.length > 19 || !passesLuhnCheck(digits)) {
+      errors.cardNumber = 'Numéro de carte invalide.';
+    }
+
+    const match = details.cardExpiry.match(/^(\d{2})\/(\d{2})$/);
+    if (!match) {
+      errors.cardExpiry = 'Format attendu : MM/AA.';
+    } else {
+      const month = Number(match[1]);
+      const expiry = new Date(2000 + Number(match[2]), month, 1);
+      if (month < 1 || month > 12) errors.cardExpiry = 'Mois invalide.';
+      else if (expiry <= new Date()) errors.cardExpiry = 'Cette carte est expirée.';
+    }
+
+    if (!/^\d{3,4}$/.test(details.cardCvv)) errors.cardCvv = 'CVV à 3 ou 4 chiffres.';
+  }
+
+  if (MOBILE_METHODS.includes(payment)) {
+    const digits = details.mobileNumber.replace(/\D/g, '');
+    if (!/^(221)?(7[05678])\d{7}$/.test(digits)) {
+      errors.mobileNumber = 'Numéro sénégalais attendu, par exemple 77 123 45 67.';
+    }
+  }
+
+  return errors;
+}
 
 interface FormState {
   firstName: string;
@@ -82,8 +203,10 @@ function validate(values: FormState): FormErrors {
 export default function Checkout() {
   const lines = useCartStore((state) => state.lines);
   const clear = useCartStore((state) => state.clear);
+  const catalog = useCatalogStore((state) => state.products);
+  const settings = useSettingsStore((state) => state.settings);
   const user = useAuthStore((state) => state.user);
-  const addOrder = useAuthStore((state) => state.addOrder);
+  const createOrder = useOrdersStore((state) => state.createOrder);
   const prefersReducedMotion = usePrefersReducedMotion();
 
   const [step, setStep] = useState(0);
@@ -101,14 +224,32 @@ export default function Checkout() {
   const [touched, setTouched] = useState<Set<keyof FormState>>(new Set());
   const [shipping, setShipping] = useState<ShippingMethodId>('domicile');
   const [payment, setPayment] = useState<PaymentMethodId>('wave');
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsState>({
+    cardName: [user?.firstName, user?.lastName].filter(Boolean).join(' '),
+    cardNumber: '',
+    cardExpiry: '',
+    cardCvv: '',
+    mobileNumber: user?.phone ?? '',
+  });
+  const [paymentErrors, setPaymentErrors] = useState<PaymentErrors>({});
+  const [paymentTouched, setPaymentTouched] = useState<Set<keyof PaymentDetailsState>>(new Set());
+  // `wave` est présélectionné par défaut, mais tant que rien n'a été
+  // explicitement cliqué, on montre toute la liste pour laisser le choix.
+  const [paymentExpanded, setPaymentExpanded] = useState(true);
   const [isSubmitting, setSubmitting] = useState(false);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  // `clear()` (Zustand) et `setOrderNumber` (React) peuvent se rendre dans des
+  // passes séparées malgré le batching automatique : une ref, mise à jour de
+  // façon synchrone, garde la garde ci-dessous fiable même si le panier vidé
+  // se rend avant que `orderNumber` n'ait rattrapé — sans quoi la commande
+  // qui vient d'être validée renvoie l'utilisateur vers un panier vide.
+  const orderPlacedRef = useRef(false);
 
-  const resolved = resolveLines(lines);
+  const resolved = resolveLines(lines, catalog);
   const subtotal = resolved.reduce((total, line) => total + line.lineTotal, 0);
   const shippingMethod = shippingMethods.find((method) => method.id === shipping)!;
   const shippingCost =
-    subtotal >= STORE.freeShippingThreshold && shipping !== 'retrait' ? 0 : shippingMethod.price;
+    subtotal >= settings.freeShippingThreshold && shipping !== 'retrait' ? 0 : shippingMethod.price;
   const total = subtotal + shippingCost;
 
   const summary = useMemo(
@@ -118,7 +259,7 @@ export default function Checkout() {
   );
 
   /* Panier vide et commande non encore passée : il n'y a rien à régler. */
-  if (resolved.length === 0 && !orderNumber) {
+  if (resolved.length === 0 && !orderNumber && !orderPlacedRef.current) {
     return <Navigate to={ROUTES.cart} replace />;
   }
 
@@ -137,6 +278,31 @@ export default function Checkout() {
     setErrors(validate(values));
   };
 
+  const selectPayment = (method: PaymentMethodId) => {
+    setPayment(method);
+    // Les champs affichés changent avec le moyen choisi : les erreurs et
+    // l'historique de saisie de l'ancien formulaire n'ont plus de sens.
+    setPaymentErrors({});
+    setPaymentTouched(new Set());
+    // Une fois un choix fait, on replie la liste sur ce seul moyen plutôt que
+    // de garder les 6 options affichées en même temps à côté de son
+    // formulaire — « Changer » la ré-ouvre.
+    setPaymentExpanded(false);
+  };
+
+  const setPaymentField = (key: keyof PaymentDetailsState, value: string) => {
+    setPaymentDetails((current) => {
+      const next = { ...current, [key]: value };
+      if (paymentTouched.has(key)) setPaymentErrors(validatePayment(payment, next));
+      return next;
+    });
+  };
+
+  const blurPaymentField = (key: keyof PaymentDetailsState) => {
+    setPaymentTouched((current) => new Set(current).add(key));
+    setPaymentErrors(validatePayment(payment, paymentDetails));
+  };
+
   const goToPayment = () => {
     const nextErrors = validate(values);
     setErrors(nextErrors);
@@ -151,28 +317,65 @@ export default function Checkout() {
   };
 
   const submitOrder = () => {
+    const nextPaymentErrors = validatePayment(payment, paymentDetails);
+    setPaymentErrors(nextPaymentErrors);
+    setPaymentTouched(new Set(Object.keys(paymentDetails) as (keyof PaymentDetailsState)[]));
+
+    if (Object.keys(nextPaymentErrors).length > 0) {
+      const firstField = Object.keys(nextPaymentErrors)[0];
+      document.getElementById(`paiement-${firstField}`)?.focus();
+      return;
+    }
+
     setSubmitting(true);
-    // Simulation d'appel réseau : le bouton reste occupé, comme il le ferait
-    // face à une vraie passerelle de paiement.
-    window.setTimeout(() => {
+    // Le délai simule une passerelle de paiement ; la commande, elle, est un
+    // vrai appel réseau vers l'API (POST /api/orders), pas une simulation. Les
+    // informations de carte / numéro mobile ne quittent jamais le navigateur :
+    // elles ne sont ni envoyées à l'API, ni enregistrées où que ce soit.
+    window.setTimeout(async () => {
       const reference = formatOrderNumber(Math.floor(100 + Math.random() * 8900));
-      addOrder({
-        id: reference,
-        date: new Date().toISOString(),
-        status: 'en-preparation',
-        total,
-        lines: summary.map((line) => ({
-          slug: line.slug,
-          name: line.product.name,
-          quantity: line.quantity,
-          price: line.unitPrice,
-        })),
-      });
+
+      try {
+        await createOrder({
+          id: reference,
+          total,
+          lines: summary.map((line) => ({
+            slug: line.slug,
+            name: line.product.name,
+            quantity: line.quantity,
+            price: line.unitPrice,
+          })),
+          customer: {
+            firstName: values.firstName,
+            lastName: values.lastName,
+            email: values.email,
+            phone: values.phone,
+            address: values.address,
+            city: values.city,
+            region: values.region,
+          },
+        });
+      } catch {
+        setSubmitting(false);
+        toast.error('Échec du paiement', {
+          description: 'La commande n’a pas pu être enregistrée. Réessayez.',
+        });
+        return;
+      }
+
+      orderPlacedRef.current = true;
       setOrderNumber(reference);
       clear();
       setSubmitting(false);
       setStep(2);
-      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      // `window.scrollTo` seul ne suffit pas : Lenis réimpose sa propre
+      // position au prochain tick s'il n'est pas prévenu (voir ScrollToTop).
+      const lenis = getLenis();
+      if (lenis) {
+        lenis.scrollTo(0, { immediate: true });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      }
     }, 1400);
   };
 
@@ -533,36 +736,157 @@ export default function Checkout() {
                     Moyen de paiement
                   </h2>
 
-                  <div className="mt-6 flex flex-col gap-3">
-                    {paymentMethods.map((method) => (
-                      <RadioCard
-                        key={method.id}
-                        name="paiement"
-                        value={method.id}
-                        checked={payment === method.id}
-                        onChange={() => setPayment(method.id)}
-                        label={method.label}
-                        description={method.description}
-                        disabled={method.id === 'livraison' && values.region !== 'Dakar'}
-                      />
-                    ))}
-                  </div>
+                  {paymentExpanded ? (
+                    <div className="mt-6 flex flex-col gap-3">
+                      {paymentMethods.map((method) => {
+                        const logoSlugs = PAYMENT_LOGOS[method.id];
+                        return (
+                          <RadioCard
+                            key={method.id}
+                            name="paiement"
+                            value={method.id}
+                            checked={payment === method.id}
+                            onChange={() => selectPayment(method.id)}
+                            onClick={() => selectPayment(method.id)}
+                            label={method.label}
+                            description={method.description}
+                            disabled={method.id === 'livraison' && values.region !== 'Dakar'}
+                            trailing={logoSlugs ? <PaymentLogos slugs={logoSlugs} /> : undefined}
+                          />
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    (() => {
+                      const selected = paymentMethods.find((method) => method.id === payment)!;
+                      const logoSlugs = PAYMENT_LOGOS[selected.id];
+                      return (
+                        <div className="mt-6 flex items-center gap-4 rounded-md border border-accent bg-accent/[0.07] p-4 shadow-glow">
+                          {logoSlugs && <PaymentLogos slugs={logoSlugs} />}
+                          <span className="flex-1">
+                            <span className="block text-body-s font-semibold text-ink">{selected.label}</span>
+                            <span className="mt-0.5 block text-caption text-ink-tertiary">
+                              {selected.description}
+                            </span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setPaymentExpanded(true)}
+                            className="shrink-0 cursor-pointer text-caption font-semibold text-accent-text underline-offset-4 hover:underline"
+                          >
+                            Changer
+                          </button>
+                        </div>
+                      );
+                    })()
+                  )}
 
-                  {values.region !== 'Dakar' && (
+                  {paymentExpanded && values.region !== 'Dakar' && (
                     <p className="mt-4 text-caption text-ink-tertiary">
                       Le paiement à la livraison n'est disponible qu'à Dakar et en banlieue.
                     </p>
                   )}
 
-                  {/* Aucune donnée de carte n'est demandée : c'est une
-                      démonstration, et faire saisir un numéro de carte dans un
-                      projet de portfolio serait une mauvaise pratique. */}
+                  {/* Formulaire propre au moyen choisi — carte pour Visa /
+                      Mastercard, numéro mobile pour les portefeuilles. Affiché
+                      seulement une fois la liste repliée sur un choix, pour ne
+                      pas s'ajouter aux 6 options encore visibles pendant la
+                      sélection. Rien n'est envoyé à l'API ni enregistré : voir
+                      submitOrder. */}
+                  {!paymentExpanded && CARD_METHODS.includes(payment) && (
+                    <div className="mt-8">
+                      <h3 className="flex items-center gap-2 text-body font-semibold text-ink">
+                        <CreditCard className="h-4 w-4 text-accent-text" aria-hidden="true" />
+                        Détails de la carte
+                      </h3>
+                      <div className="mt-4 grid gap-5 sm:grid-cols-2">
+                        <Input
+                          id="paiement-cardName"
+                          label="Nom sur la carte"
+                          required
+                          autoComplete="cc-name"
+                          placeholder="MARC FALL"
+                          value={paymentDetails.cardName}
+                          error={paymentTouched.has('cardName') ? paymentErrors.cardName : undefined}
+                          onChange={(event) => setPaymentField('cardName', event.target.value)}
+                          onBlur={() => blurPaymentField('cardName')}
+                          wrapperClassName="sm:col-span-2"
+                        />
+                        <Input
+                          id="paiement-cardNumber"
+                          label="Numéro de carte"
+                          required
+                          inputMode="numeric"
+                          autoComplete="cc-number"
+                          placeholder="4242 4242 4242 4242"
+                          value={paymentDetails.cardNumber}
+                          error={paymentTouched.has('cardNumber') ? paymentErrors.cardNumber : undefined}
+                          onChange={(event) => setPaymentField('cardNumber', formatCardNumber(event.target.value))}
+                          onBlur={() => blurPaymentField('cardNumber')}
+                          wrapperClassName="sm:col-span-2"
+                        />
+                        <Input
+                          id="paiement-cardExpiry"
+                          label="Expiration"
+                          required
+                          inputMode="numeric"
+                          autoComplete="cc-exp"
+                          placeholder="MM/AA"
+                          value={paymentDetails.cardExpiry}
+                          error={paymentTouched.has('cardExpiry') ? paymentErrors.cardExpiry : undefined}
+                          onChange={(event) => setPaymentField('cardExpiry', formatExpiry(event.target.value))}
+                          onBlur={() => blurPaymentField('cardExpiry')}
+                        />
+                        <Input
+                          id="paiement-cardCvv"
+                          type="password"
+                          label="CVV"
+                          required
+                          inputMode="numeric"
+                          autoComplete="cc-csc"
+                          placeholder="123"
+                          value={paymentDetails.cardCvv}
+                          error={paymentTouched.has('cardCvv') ? paymentErrors.cardCvv : undefined}
+                          onChange={(event) =>
+                            setPaymentField('cardCvv', event.target.value.replace(/\D/g, '').slice(0, 4))
+                          }
+                          onBlur={() => blurPaymentField('cardCvv')}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {!paymentExpanded && MOBILE_METHODS.includes(payment) && (
+                    <div className="mt-8">
+                      <h3 className="flex items-center gap-2 text-body font-semibold text-ink">
+                        <Smartphone className="h-4 w-4 text-accent-text" aria-hidden="true" />
+                        Numéro {paymentMethods.find((method) => method.id === payment)?.label}
+                      </h3>
+                      <div className="mt-4">
+                        <Input
+                          id="paiement-mobileNumber"
+                          type="tel"
+                          inputMode="tel"
+                          label="Numéro de téléphone"
+                          required
+                          autoComplete="tel"
+                          placeholder="77 123 45 67"
+                          hint="Une demande de confirmation sera envoyée sur ce numéro."
+                          value={paymentDetails.mobileNumber}
+                          error={paymentTouched.has('mobileNumber') ? paymentErrors.mobileNumber : undefined}
+                          onChange={(event) => setPaymentField('mobileNumber', event.target.value)}
+                          onBlur={() => blurPaymentField('mobileNumber')}
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="mt-8 flex items-start gap-3 rounded-md border border-border bg-elevated p-4">
                     <Lock className="mt-0.5 h-4 w-4 shrink-0 text-accent-text" aria-hidden="true" />
                     <p className="text-caption leading-relaxed text-ink-secondary">
-                      Projet de démonstration : aucun paiement réel n'est effectué et aucune donnée
-                      bancaire n'est demandée. Sur la boutique réelle, cette étape redirige vers la
-                      passerelle sécurisée de l'opérateur choisi.
+                      Projet de démonstration : ces informations ne sont ni transmises ni enregistrées
+                      — aucun paiement réel n'est effectué. Sur la boutique réelle, cette étape
+                      redirige vers la passerelle sécurisée de l'opérateur choisi.
                     </p>
                   </div>
                 </section>
@@ -612,10 +936,10 @@ export default function Checkout() {
           <p className="mt-4 text-center text-caption text-ink-tertiary">
             Besoin d'aide ?{' '}
             <a
-              href={`tel:${STORE.phone.replace(/\s/g, '')}`}
+              href={`tel:${settings.phone.replace(/\s/g, '')}`}
               className="text-accent-text underline-offset-4 hover:underline"
             >
-              {STORE.phone}
+              {settings.phone}
             </a>
           </p>
         </aside>

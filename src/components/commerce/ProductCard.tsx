@@ -111,7 +111,11 @@ export const ProductCard = memo(function ProductCard({ product, priority = false
         aria-pressed={isFavorite}
         aria-label={isFavorite ? `Retirer ${product.name} des favoris` : `Ajouter ${product.name} aux favoris`}
         className={cn(
-          'absolute right-1.5 top-1.5 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full',
+          // z-10 : sans ça, le lien invisible qui couvre toute la carte (le
+          // `::before` du nom de produit) passe par-dessus ce bouton et
+          // intercepte le tap — le cœur devient cliquable en apparence
+          // seulement, chaque appui rouvrait la fiche produit à la place.
+          'tap-target absolute right-1.5 top-1.5 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full',
           'bg-surface/85 backdrop-blur-md transition-colors duration-fast hover:bg-surface',
         )}
       >
@@ -158,7 +162,7 @@ export const ProductCard = memo(function ProductCard({ product, priority = false
             disabled={isOutOfStock}
             aria-label={`Ajouter ${product.name} au panier`}
             className={cn(
-              'relative z-10 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full',
+              'tap-target relative z-10 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full',
               'transition-all duration-fast ease-out-expo active:scale-90',
               'disabled:pointer-events-none disabled:opacity-30',
               justAdded ? 'bg-success text-carbon-950' : 'bg-accent-solid text-accent-fg hover:bg-accent-solid-hover',

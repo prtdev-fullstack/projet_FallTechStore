@@ -183,7 +183,10 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       className={cn(
         base,
         variants[variant],
-        // 44 px minimum sur tactile, 40 px sur pointeur fin.
+        // `md` atteint dejà 44 px sur tactile. `sm` (40 px) reste sous le
+        // minimum : `tap-target` complète sa zone de frappe réelle sans
+        // agrandir le bouton visible, pour les deux tailles uniformément.
+        'tap-target',
         size === 'md' ? 'h-11 w-11 lg:h-10 lg:w-10' : 'h-10 w-10 lg:h-9 lg:w-9',
         'rounded-md p-0',
         className,

@@ -7,10 +7,13 @@ Smartphones, audio, accessoires et objets connectés, pour le marché sénégala
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
-npm run build      # génère le sitemap puis compile
-npm run typecheck  # tsc --noEmit
+npm run seed        # crée la base SQLite et le compte admin (une fois)
+npm run dev         # lance le front (Vite) ET l'API (Express) ensemble
+npm run build       # génère le sitemap puis compile le front
+npm run typecheck   # tsc --noEmit
 ```
+
+`npm run seed` affiche l'e-mail et le mot de passe du compte admin créé — à noter, ils ne sont montrés qu'une fois. Voir [Backend](#backend) plus bas.
 
 ---
 
@@ -92,8 +95,9 @@ src/
 ├── pages/           11 pages, toutes chargées à la demande
 ├── layouts/         RootLayout
 ├── hooks/           7 hooks (scroll, thème, média, verrou de défilement…)
-├── store/           cart · wishlist · auth · ui  (Zustand + persist)
-├── data/            catalogue, 24 produits, 43 avis
+├── store/           cart · wishlist · ui (persistés en local) · auth · admin ·
+│                    catalog · orders · settings (servis par l'API, voir server/)
+├── data/            avis clients + graine du catalogue (server/seed.ts)
 ├── constants/       routes, mouvement
 ├── utils/           cn(), formatage FCFA
 └── styles/          tokens · globals · fonts
@@ -160,13 +164,26 @@ Les pages dépendant d'un état local (panier, commande, compte) sont en `noinde
 
 ---
 
-## Ce qui est simulé
+## Backend
 
-Projet de démonstration, sans back-end :
+API Express + SQLite dans `server/` (module natif `node:sqlite`, aucun driver à compiler). `npm run dev` lance le front et l'API ensemble via `concurrently` ; le proxy Vite (`vite.config.ts`) redirige `/api/*` vers `http://localhost:4310` en dev, donc le navigateur ne parle qu'à une seule origine.
+
+```
+server/
+├── db.mjs      Connexion + schéma (admins, products, orders, settings)
+├── seed.ts     Amorçage — réutilise src/data/products.ts et constants/routes.ts
+├── auth.mjs    Session admin : JWT signé, cookie httpOnly, secret généré au premier lancement
+└── index.mjs   Routes de l'API
+```
+
+Le catalogue, les commandes et les paramètres de la boutique sont désormais de vraies données serveur : une modification faite dans `/admin` est visible depuis n'importe quel navigateur, pas seulement celui qui l'a faite. Passer une commande décrémente réellement le stock en base.
+
+**Connexion admin** — voir `/admin/connexion` ; identifiants créés par `npm run seed`, mot de passe vérifié côté serveur (bcrypt), jamais transmis en clair après la création du compte.
+
+## Ce qui reste simulé
 
 - **Paiement** — aucune transaction, aucune donnée bancaire demandée ni stockée
-- **Authentification** — aucun mot de passe vérifié ni conservé ; seule la fonction `login` du store changerait face à une vraie API
-- **Catalogue et avis** — données statiques dans `src/data/`
-- **Commandes** — persistées en `localStorage`
+- **Compte client** — connexion sans mot de passe (n'importe quel e-mail ouvre une session de démonstration) ; volontairement différent du compte admin, qui vérifie un vrai mot de passe
+- **Avis produits** — données statiques dans `src/data/reviews.ts`
 
 Ces limites sont affichées dans l'interface, aux endroits concernés.

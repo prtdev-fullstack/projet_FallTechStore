@@ -349,7 +349,7 @@ export function QuantityStepper({
         aria-label="Diminuer la quantité"
         className={cn(
           buttonSize,
-          'flex cursor-pointer items-center justify-center rounded-l-md text-ink-secondary',
+          'tap-target flex cursor-pointer items-center justify-center rounded-l-md text-ink-secondary',
           'transition-colors duration-fast hover:bg-elevated-hover hover:text-ink',
           'disabled:pointer-events-none disabled:opacity-30',
         )}
@@ -381,7 +381,7 @@ export function QuantityStepper({
         aria-label="Augmenter la quantité"
         className={cn(
           buttonSize,
-          'flex cursor-pointer items-center justify-center rounded-r-md text-ink-secondary',
+          'tap-target flex cursor-pointer items-center justify-center rounded-r-md text-ink-secondary',
           'transition-colors duration-fast hover:bg-elevated-hover hover:text-ink',
           'disabled:pointer-events-none disabled:opacity-30',
         )}

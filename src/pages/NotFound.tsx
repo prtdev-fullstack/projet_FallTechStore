@@ -1,5 +1,5 @@
 import { ROUTES } from '../constants/routes';
-import { products } from '../data/products';
+import { useCatalogStore } from '../store/catalog.store';
 import { Button } from '../components/ui';
 import { ProductCard } from '../components/commerce/ProductCard';
 import { Reveal, Stagger, StaggerItem, TextReveal } from '../components/motion';
@@ -13,6 +13,7 @@ import { Seo } from '../components/seo/Seo';
  * sortie immédiate et quatre produits, plutôt qu'un cul-de-sac.
  */
 export default function NotFound() {
+  const products = useCatalogStore((state) => state.products);
   const suggestions = products.filter((product) => product.featured).slice(0, 4);
 
   return (

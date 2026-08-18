@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { DURATION, EASE } from '../constants/motion';
-import { useSmoothScroll } from '../hooks/useSmoothScroll';
+import { getLenis, useSmoothScroll } from '../hooks/useSmoothScroll';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 import { useUIStore } from '../store/ui.store';
 import { Header } from '../components/layout/Header';
@@ -18,12 +18,22 @@ import { ScrollProgress } from '../components/motion';
  * React Router ne le fait pas : sans cela, on arrive en bas d'une fiche produit
  * après avoir cliqué depuis le bas d'un catalogue. `instant` volontairement —
  * animer ce déplacement donne l'impression que la page « tombe ».
+ *
+ * Lenis (défilement fluide) maintient sa propre position interne, indépendante
+ * de `window.scrollY` : un simple `window.scrollTo` ne la met pas à jour, et sa
+ * boucle `raf` la réimpose au prochain tick — on atterrit en pied de page. Il
+ * faut passer par `lenis.scrollTo(0, { immediate: true })` quand Lenis est actif.
  */
 function ScrollToTop() {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    const lenis = getLenis();
+    if (lenis) {
+      lenis.scrollTo(0, { immediate: true });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    }
   }, [pathname]);
 
   return null;

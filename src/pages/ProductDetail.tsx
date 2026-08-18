@@ -12,13 +12,15 @@ import {
   Truck,
 } from 'lucide-react';
 import { DURATION, EASE } from '../constants/motion';
-import { ROUTES, STORE } from '../constants/routes';
+import { ROUTES } from '../constants/routes';
+import type { Product } from '../types';
 import { brandById, categoryById } from '../data/catalog';
-import { productBySlug, products } from '../data/products';
 import { ratingBreakdown, reviewsForProduct } from '../data/reviews';
 import { useIsTouch } from '../hooks/useMediaQuery';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 import { useCartStore, defaultVariants, priceForVariants } from '../store/cart.store';
+import { useCatalogStore, productBySlugMap } from '../store/catalog.store';
+import { useSettingsStore } from '../store/settings.store';
 import { useWishlistStore } from '../store/wishlist.store';
 import { useUIStore } from '../store/ui.store';
 import { discountPercent, formatDate, formatPrice, formatPriceShort, formatRating } from '../utils/format';
@@ -35,20 +37,28 @@ import {
 } from '../components/ui';
 import { ProductCard } from '../components/commerce/ProductCard';
 import { ProductImage } from '../components/commerce/ProductImage';
+import { RouteLoader } from '../components/brand/Loader';
 import { Reveal, Stagger, StaggerItem } from '../components/motion';
 import { Seo, breadcrumbJsonLd, productJsonLd } from '../components/seo/Seo';
 
 /* ==========================================================================
-   Galerie avec zoom à la loupe.
+   Galerie avec zoom à la loupe et vignettes.
 
    Le zoom est désactivé au tactile : au doigt, il n'y a pas de position de
-   curseur à suivre, et le pincement natif fait déjà le travail.
+   curseur à suivre, et le pincement natif fait déjà le travail. Les
+   vignettes ne s'affichent que si le produit a plus d'une photo — pas de
+   rangée vide pour les 38 références du catalogue d'origine, qui n'ont
+   qu'un seul visuel traité.
    ========================================================================== */
 
-function Gallery({ product }: { product: ReturnType<typeof productBySlug.get> & object }) {
+function Gallery({ product }: { product: Product }) {
+  const [selected, setSelected] = useState(0);
   const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const isTouch = useIsTouch();
+
+  const images = product.images && product.images.length > 0 ? product.images : undefined;
+  const selectedSrc = images?.[Math.min(selected, images.length - 1)];
 
   const onMouseMove = (event: React.MouseEvent) => {
     if (isTouch || !frameRef.current) return;
@@ -60,31 +70,60 @@ function Gallery({ product }: { product: ReturnType<typeof productBySlug.get> & 
   };
 
   return (
-    <div
-      ref={frameRef}
-      onMouseMove={onMouseMove}
-      onMouseLeave={() => setZoom(null)}
-      className="relative aspect-square overflow-hidden rounded-xl border border-border bg-sunken"
-    >
+    <div>
       <div
-        className="absolute inset-0"
-        style={
-          zoom
-            ? {
-                transform: 'scale(1.9)',
-                transformOrigin: `${zoom.x}% ${zoom.y}%`,
-                transition: 'transform 220ms cubic-bezier(0.16,1,0.3,1)',
-              }
-            : { transform: 'scale(1)', transition: 'transform 320ms cubic-bezier(0.16,1,0.3,1)' }
-        }
+        ref={frameRef}
+        onMouseMove={onMouseMove}
+        onMouseLeave={() => setZoom(null)}
+        className="relative aspect-square overflow-hidden rounded-xl border border-border bg-sunken"
       >
-        <ProductImage product={product} priority />
+        <div
+          className="absolute inset-0"
+          style={
+            zoom
+              ? {
+                  transform: 'scale(1.9)',
+                  transformOrigin: `${zoom.x}% ${zoom.y}%`,
+                  transition: 'transform 220ms cubic-bezier(0.16,1,0.3,1)',
+                }
+              : { transform: 'scale(1)', transition: 'transform 320ms cubic-bezier(0.16,1,0.3,1)' }
+          }
+        >
+          {/* `key` force un remontage au changement de photo : sans ça, le
+              repli « image cassée » de ProductImage (déclenché une fois)
+              resterait affiché même après avoir sélectionné une vignette
+              valide. */}
+          <ProductImage key={selectedSrc ?? product.slug} product={product} src={selectedSrc} priority />
+        </div>
+
+        {!isTouch && (
+          <p className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-border bg-surface/80 px-3 py-1.5 text-caption text-ink-tertiary backdrop-blur-md">
+            Survolez pour agrandir
+          </p>
+        )}
       </div>
 
-      {!isTouch && (
-        <p className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-border bg-surface/80 px-3 py-1.5 text-caption text-ink-tertiary backdrop-blur-md">
-          Survolez pour agrandir
-        </p>
+      {images && images.length > 1 && (
+        <div role="tablist" aria-label="Photos du produit" className="mt-3 grid grid-cols-4 gap-3">
+          {images.map((src, index) => (
+            <button
+              key={src}
+              type="button"
+              role="tab"
+              aria-selected={index === selected}
+              aria-label={`Photo ${index + 1} sur ${images.length}`}
+              onClick={() => setSelected(index)}
+              className={cn(
+                'aspect-square cursor-pointer overflow-hidden rounded-md border bg-sunken transition-colors duration-fast',
+                index === selected
+                  ? 'border-accent ring-2 ring-accent/30'
+                  : 'border-border hover:border-border-strong',
+              )}
+            >
+              <ProductImage product={product} src={src} size="thumb" />
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -94,6 +133,10 @@ function Gallery({ product }: { product: ReturnType<typeof productBySlug.get> & 
 
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
+  const products = useCatalogStore((state) => state.products);
+  const isCatalogLoaded = useCatalogStore((state) => state.isLoaded);
+  const settings = useSettingsStore((state) => state.settings);
+  const productBySlug = useMemo(() => productBySlugMap(products), [products]);
   const product = slug ? productBySlug.get(slug) : undefined;
 
   const add = useCartStore((state) => state.add);
@@ -113,10 +156,15 @@ export default function ProductDetail() {
     return products
       .filter((item) => item.slug !== product.slug && item.category === product.category)
       .slice(0, 4);
-  }, [product]);
+  }, [product, products]);
 
   const productReviews = useMemo(() => (product ? reviewsForProduct(product.slug) : []), [product]);
   const breakdown = useMemo(() => (product ? ratingBreakdown(product.slug) : []), [product]);
+
+  // Le catalogue vient de l'API : sur un chargement direct de cette URL
+  // (F5, lien partagé), `products` est encore vide le temps de la réponse —
+  // il ne faut pas confondre ça avec un slug inconnu.
+  if (!isCatalogLoaded) return <RouteLoader />;
 
   // Un slug inconnu renvoie vers le catalogue plutôt que d'afficher une page
   // d'erreur : l'utilisateur cherchait un produit, on lui en propose d'autres.
@@ -172,7 +220,7 @@ export default function ProductDetail() {
           résultats, ce qui change tout sur le taux de clic. */}
       <Seo
         title={`${product.name} — ${formatPriceShort(product.price)}`}
-        description={`${product.tagline} ${product.description.slice(0, 110)}… Garantie ${STORE.warrantyMonths} mois, livraison 48 h au Sénégal.`}
+        description={`${product.tagline} ${product.description.slice(0, 110)}… Garantie ${settings.warrantyMonths} mois, livraison 48 h au Sénégal.`}
         path={`/produit/${product.slug}`}
         type="product"
         jsonLd={[
@@ -208,7 +256,7 @@ export default function ProductDetail() {
         <div className="mt-8 grid gap-10 lg:grid-cols-2 lg:gap-14">
           {/* Galerie — collante sur grand écran pendant qu'on lit la fiche. */}
           <div className="lg:sticky lg:top-[calc(var(--header-height-compact)+2rem)] lg:self-start">
-            <Gallery product={product} />
+            <Gallery key={product.slug} product={product} />
           </div>
 
           {/* Informations */}
@@ -233,8 +281,13 @@ export default function ProductDetail() {
               ou {formatPriceShort(Math.round(unitPrice / 3))} × 3 sans frais
             </p>
 
-            {/* Variantes */}
-            {product.variantGroups.map((group) => (
+            {/* Variantes — la couleur ne pilote plus de photo dédiée depuis
+                que la fiche s'appuie sur les 3 vraies photos importées
+                (product.images) : le sélecteur de nuance n'aurait plus rien
+                à montrer, on ne garde que les déclinaisons utiles (stockage). */}
+            {product.variantGroups
+              .filter((group) => group.id !== 'couleur')
+              .map((group) => (
               <fieldset key={group.id} className="mt-8">
                 <legend className="text-body-s font-semibold text-ink">
                   {group.label}
@@ -246,7 +299,6 @@ export default function ProductDetail() {
                 <div className="mt-3 flex flex-wrap gap-2.5">
                   {group.options.map((option) => {
                     const isSelected = variants[group.id] === option.id;
-                    const isColor = group.id === 'couleur' && option.swatch;
 
                     return (
                       <button
@@ -258,31 +310,18 @@ export default function ProductDetail() {
                         aria-label={`${group.label} : ${option.label}${option.inStock ? '' : ' (indisponible)'}`}
                         title={option.label}
                         className={cn(
-                          'relative cursor-pointer rounded-md border transition-all duration-fast ease-out-expo',
+                          'relative h-11 cursor-pointer rounded-md border px-4 text-body-s font-medium text-ink transition-all duration-fast ease-out-expo',
                           'disabled:cursor-not-allowed disabled:opacity-40',
-                          isColor
-                            ? 'h-11 w-11 p-1'
-                            : 'h-11 px-4 text-body-s font-medium text-ink',
                           isSelected
                             ? 'border-accent shadow-glow'
                             : 'border-border hover:border-border-strong',
                         )}
                       >
-                        {isColor ? (
-                          <span
-                            className="block h-full w-full rounded-[6px]"
-                            style={{ backgroundColor: option.swatch }}
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          <>
-                            {option.label}
-                            {option.priceDelta > 0 && (
-                              <span className="tabular ml-1.5 text-caption text-ink-tertiary">
-                                +{formatPriceShort(option.priceDelta)}
-                              </span>
-                            )}
-                          </>
+                        {option.label}
+                        {option.priceDelta > 0 && (
+                          <span className="tabular ml-1.5 text-caption text-ink-tertiary">
+                            +{formatPriceShort(option.priceDelta)}
+                          </span>
                         )}
                         {/* Barré diagonal : l'indisponibilité ne repose pas
                             uniquement sur l'opacité. */}
@@ -373,9 +412,9 @@ export default function ProductDetail() {
             {/* Réassurance */}
             <ul className="mt-8 divide-y divide-border-subtle border-y border-border-subtle">
               {[
-                { icon: ShieldCheck, text: `Garantie ${STORE.warrantyMonths} mois, prise en charge en boutique` },
-                { icon: Truck, text: `Livraison offerte dès ${formatPriceShort(STORE.freeShippingThreshold)}` },
-                { icon: RotateCcw, text: `Retour sous ${STORE.returnDays} jours, remboursement intégral` },
+                { icon: ShieldCheck, text: `Garantie ${settings.warrantyMonths} mois, prise en charge en boutique` },
+                { icon: Truck, text: `Livraison offerte dès ${formatPriceShort(settings.freeShippingThreshold)}` },
+                { icon: RotateCcw, text: `Retour sous ${settings.returnDays} jours, remboursement intégral` },
               ].map((item) => (
                 <li key={item.text} className="flex items-center gap-3 py-3.5">
                   <item.icon className="h-4 w-4 shrink-0 text-accent-text" aria-hidden="true" />

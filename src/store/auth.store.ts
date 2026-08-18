@@ -1,14 +1,13 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Order } from '../types';
 
 /* ==========================================================================
    Compte utilisateur — authentification simulée.
 
-   Aucun mot de passe n'est stocké ni vérifié : c'est une démonstration
-   d'architecture, pas un système d'authentification. Le jour où une vraie API
-   arrive, seule la fonction `login` change ; les composants, les routes et le
-   garde de navigation restent identiques.
+   Volontairement resté simulé, contrairement à la session admin (voir
+   admin.store.ts) : c'est le compte client de démonstration, sans mot de
+   passe réel. Les commandes ne vivent plus ici — voir orders.store.ts,
+   qui les persiste côté serveur.
    ========================================================================== */
 
 export interface User {
@@ -21,12 +20,10 @@ export interface User {
 
 interface AuthState {
   user: User | null;
-  orders: Order[];
   login: (email: string) => void;
   register: (user: User) => void;
   logout: () => void;
   updateProfile: (patch: Partial<User>) => void;
-  addOrder: (order: Order) => void;
 }
 
 const demoUser: User = {
@@ -41,7 +38,6 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
-      orders: [],
 
       login: (email) =>
         set({ user: { ...demoUser, email: email || demoUser.email } }),
@@ -52,8 +48,6 @@ export const useAuthStore = create<AuthState>()(
 
       updateProfile: (patch) =>
         set((state) => (state.user ? { user: { ...state.user, ...patch } } : state)),
-
-      addOrder: (order) => set((state) => ({ orders: [order, ...state.orders] })),
     }),
     { name: 'falltech-auth', storage: createJSONStorage(() => localStorage) },
   ),

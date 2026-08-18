@@ -1,16 +1,17 @@
 import { useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Heart, Menu, Moon, Search, ShoppingBag, Sun, User, X } from 'lucide-react';
+import { Heart, Menu, Search, ShoppingBag, User, X } from 'lucide-react';
 import { DURATION, EASE } from '../../constants/motion';
-import { MAIN_NAV, ROUTES, STORE } from '../../constants/routes';
+import { MAIN_NAV, ROUTES } from '../../constants/routes';
 import { useScrollDirection } from '../../hooks/useScrollDirection';
-import { useTheme } from '../../hooks/useTheme';
+import { useIsMobile } from '../../hooks/useMediaQuery';
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
 import { useCartStore, selectItemCount } from '../../store/cart.store';
 import { useWishlistStore } from '../../store/wishlist.store';
 import { useAuthStore } from '../../store/auth.store';
 import { useUIStore } from '../../store/ui.store';
+import { useSettingsStore } from '../../store/settings.store';
 import { formatPriceShort } from '../../utils/format';
 import { cn } from '../../utils/cn';
 import { Logo } from '../brand/Logo';
@@ -59,6 +60,7 @@ function CartButton() {
 function MobileNav() {
   const isOpen = useUIStore((state) => state.isMobileNavOpen);
   const close = useUIStore((state) => state.closeMobileNav);
+  const settings = useSettingsStore((state) => state.settings);
   const location = useLocation();
 
   useLockBodyScroll(isOpen);
@@ -128,8 +130,8 @@ function MobileNav() {
           </nav>
 
           <div className="border-t border-border-subtle px-5 py-5 text-caption text-ink-tertiary">
-            <p>{STORE.address}</p>
-            <p className="mt-1">{STORE.phone}</p>
+            <p>{settings.address}</p>
+            <p className="mt-1">{settings.phone}</p>
           </div>
         </motion.div>
       )}
@@ -139,16 +141,20 @@ function MobileNav() {
 
 export function Header() {
   const { isScrolled, isHidden } = useScrollDirection();
-  const { isDark, toggleTheme } = useTheme();
+  const isMobile = useIsMobile();
   const setCommandOpen = useUIStore((state) => state.setCommandOpen);
   const isMobileNavOpen = useUIStore((state) => state.isMobileNavOpen);
   const toggleMobileNav = useUIStore((state) => state.toggleMobileNav);
   const wishlistCount = useWishlistStore((state) => state.slugs.length);
   const user = useAuthStore((state) => state.user);
+  const settings = useSettingsStore((state) => state.settings);
 
   // Le menu mobile ouvert fige l'en-tête : le voir se dérober sous le menu
-  // serait déroutant.
-  const hidden = isHidden && !isMobileNavOpen;
+  // serait déroutant. Sur mobile, l'en-tête reste toujours visible pendant le
+  // défilement — se dérober est un gain d'espace pensé pour le curseur/scroll
+  // fin d'un grand écran, pas pour le pouce, qui a besoin d'un repère de
+  // navigation constant du haut de page jusqu'au pied de page.
+  const hidden = isHidden && !isMobileNavOpen && !isMobile;
 
   return (
     <>
@@ -157,9 +163,9 @@ export function Header() {
         <p className="container-page py-2 text-caption text-ink-secondary">
           Livraison offerte dès{' '}
           <strong className="tabular text-ink">
-            {formatPriceShort(STORE.freeShippingThreshold)}
+            {formatPriceShort(settings.freeShippingThreshold)}
           </strong>{' '}
-          · Garantie {STORE.warrantyMonths} mois · Paiement à la livraison à Dakar
+          · Garantie {settings.warrantyMonths} mois · Paiement à la livraison à Dakar
         </p>
       </div>
 
@@ -231,19 +237,6 @@ export function Header() {
               className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-md text-ink-secondary transition-colors duration-fast hover:bg-elevated hover:text-ink lg:h-10 lg:w-10 xl:hidden"
             >
               <Search className="h-5 w-5" aria-hidden="true" />
-            </button>
-
-            <button
-              type="button"
-              onClick={toggleTheme}
-              aria-label={isDark ? 'Activer le thème clair' : 'Activer le thème sombre'}
-              className="hidden h-10 w-10 cursor-pointer items-center justify-center rounded-md text-ink-secondary transition-colors duration-fast hover:bg-elevated hover:text-ink sm:flex"
-            >
-              {isDark ? (
-                <Sun className="h-5 w-5" aria-hidden="true" />
-              ) : (
-                <Moon className="h-5 w-5" aria-hidden="true" />
-              )}
             </button>
 
             <Link

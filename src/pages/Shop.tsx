@@ -5,7 +5,7 @@ import { PackageSearch, SlidersHorizontal, X } from 'lucide-react';
 import type { CategoryId } from '../types';
 import { DURATION, EASE } from '../constants/motion';
 import { brands, categories } from '../data/catalog';
-import { priceRange, products } from '../data/products';
+import { useCatalogStore, computePriceRange } from '../store/catalog.store';
 import { useDebounce } from '../hooks/useDebounce';
 import { useIsMobile } from '../hooks/useMediaQuery';
 import { formatPriceCompact, formatNumber } from '../utils/format';
@@ -65,6 +65,9 @@ export default function Shop() {
   const [isFilterOpen, setFilterOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [isPending, setPending] = useState(false);
+
+  const products = useCatalogStore((state) => state.products);
+  const priceRange = useMemo(() => computePriceRange(products), [products]);
 
   const selectedCategories = readList(searchParams, 'categorie') as CategoryId[];
   const selectedBrands = readList(searchParams, 'marque');
@@ -157,7 +160,7 @@ export default function Shop() {
     });
 
     return result;
-  }, [query, categoryKey, brandKey, onlyPromo, onlyInStock, maxPrice, sort]);
+  }, [products, query, categoryKey, brandKey, onlyPromo, onlyInStock, maxPrice, sort]);
 
   /* Le squelette n'apparaît qu'au changement de filtre : sur un catalogue
      local, le calcul est instantané, mais un retour visuel confirme que

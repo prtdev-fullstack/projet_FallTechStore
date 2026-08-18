@@ -92,6 +92,14 @@ export interface Product {
    * le champ reste optionnel pour couvrir un futur ajout sans visuel.
    */
   hasPhotos?: boolean;
+  /**
+   * Jusqu'à plusieurs photos, dans l'ordre d'affichage — la première sert de
+   * couverture (carte produit, panier, palette de recherche), les
+   * suivantes alimentent la galerie de la fiche produit. Vide ou absent :
+   * repli sur /public/products/<slug>.webp (et -thumb.webp), le visuel
+   * traité une fois pour toutes pour le catalogue d'origine.
+   */
+  images?: string[];
 }
 
 export interface CartLine {
@@ -104,7 +112,7 @@ export interface CartLine {
 }
 
 export type ShippingMethodId = 'domicile' | 'relais' | 'retrait';
-export type PaymentMethodId = 'orange-money' | 'wave' | 'free-money' | 'carte' | 'livraison';
+export type PaymentMethodId = 'orange-money' | 'wave' | 'free-money' | 'visa' | 'mastercard' | 'livraison';
 
 export interface ShippingMethod {
   id: ShippingMethodId;
@@ -126,4 +134,19 @@ export interface Order {
   status: 'en-preparation' | 'expediee' | 'livree';
   total: number;
   lines: { slug: string; name: string; quantity: number; price: number }[];
+  /**
+   * Instantané du client au moment de la commande — pas une référence vers le
+   * compte, qui peut changer d'e-mail ou être supprimé ensuite. L'admin (liste
+   * des commandes, clients dérivés) doit voir l'information telle qu'elle
+   * était à l'achat.
+   */
+  customer: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    address: string;
+    city: string;
+    region: string;
+  };
 }

@@ -2,8 +2,10 @@ import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, ShieldCheck, ShoppingBag, Trash2, Truck } from 'lucide-react';
 import { DURATION, EASE } from '../constants/motion';
-import { ROUTES, STORE } from '../constants/routes';
+import { ROUTES } from '../constants/routes';
 import { useCartStore, resolveLines } from '../store/cart.store';
+import { useCatalogStore } from '../store/catalog.store';
+import { useSettingsStore } from '../store/settings.store';
 import { formatPrice, formatPriceShort } from '../utils/format';
 import { Breadcrumb, Button, EmptyState, QuantityStepper } from '../components/ui';
 import { ProductImage } from '../components/commerce/ProductImage';
@@ -14,12 +16,14 @@ export default function Cart() {
   const lines = useCartStore((state) => state.lines);
   const setQuantity = useCartStore((state) => state.setQuantity);
   const remove = useCartStore((state) => state.remove);
+  const catalog = useCatalogStore((state) => state.products);
+  const settings = useSettingsStore((state) => state.settings);
 
-  const resolved = resolveLines(lines);
+  const resolved = resolveLines(lines, catalog);
   const subtotal = resolved.reduce((total, line) => total + line.lineTotal, 0);
-  const isFreeShipping = subtotal >= STORE.freeShippingThreshold;
-  const missing = Math.max(0, STORE.freeShippingThreshold - subtotal);
-  const progress = Math.min(100, (subtotal / STORE.freeShippingThreshold) * 100);
+  const isFreeShipping = subtotal >= settings.freeShippingThreshold;
+  const missing = Math.max(0, settings.freeShippingThreshold - subtotal);
+  const progress = Math.min(100, (subtotal / settings.freeShippingThreshold) * 100);
   const itemCount = resolved.reduce((total, line) => total + line.quantity, 0);
 
   /* Rendu dans les deux branches : sans cela, un panier vide conservait le titre
@@ -202,7 +206,7 @@ export default function Cart() {
 
               <p className="mt-4 flex items-center justify-center gap-2 text-caption text-ink-tertiary">
                 <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-                Paiement sécurisé · Garantie {STORE.warrantyMonths} mois
+                Paiement sécurisé · Garantie {settings.warrantyMonths} mois
               </p>
             </div>
           </Reveal>

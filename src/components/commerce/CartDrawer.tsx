@@ -2,8 +2,10 @@ import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ShoppingBag, Trash2 } from 'lucide-react';
 import { DURATION, EASE } from '../../constants/motion';
-import { ROUTES, STORE } from '../../constants/routes';
+import { ROUTES } from '../../constants/routes';
 import { useCartStore, resolveLines } from '../../store/cart.store';
+import { useCatalogStore } from '../../store/catalog.store';
+import { useSettingsStore } from '../../store/settings.store';
 import { useUIStore } from '../../store/ui.store';
 import { formatPrice, formatPriceShort } from '../../utils/format';
 import { Button } from '../ui/Button';
@@ -18,11 +20,13 @@ export function CartDrawer() {
   const lines = useCartStore((state) => state.lines);
   const setQuantity = useCartStore((state) => state.setQuantity);
   const remove = useCartStore((state) => state.remove);
+  const catalog = useCatalogStore((state) => state.products);
+  const settings = useSettingsStore((state) => state.settings);
 
-  const resolved = resolveLines(lines);
+  const resolved = resolveLines(lines, catalog);
   const subtotal = resolved.reduce((total, line) => total + line.lineTotal, 0);
-  const missingForFreeShipping = Math.max(0, STORE.freeShippingThreshold - subtotal);
-  const progress = Math.min(100, (subtotal / STORE.freeShippingThreshold) * 100);
+  const missingForFreeShipping = Math.max(0, settings.freeShippingThreshold - subtotal);
+  const progress = Math.min(100, (subtotal / settings.freeShippingThreshold) * 100);
 
   /* Le récapitulatif passe par la prop `footer` du Drawer : il reste ainsi
      collé en bas, visible sans défiler, même avec dix lignes au panier. */
@@ -151,7 +155,7 @@ export function CartDrawer() {
                       type="button"
                       onClick={() => remove(line.key)}
                       aria-label={`Retirer ${line.product.name} du panier`}
-                      className="-m-2 h-10 w-10 shrink-0 cursor-pointer rounded-md p-2 text-ink-tertiary transition-colors duration-fast hover:bg-elevated hover:text-danger"
+                      className="tap-target -m-2 h-10 w-10 shrink-0 cursor-pointer rounded-md p-2 text-ink-tertiary transition-colors duration-fast hover:bg-elevated hover:text-danger"
                     >
                       <Trash2 className="h-4 w-4" aria-hidden="true" />
                     </button>

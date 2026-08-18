@@ -1,15 +1,19 @@
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, RotateCcw, ShieldCheck, Sparkles, Truck, Zap } from 'lucide-react';
-import { ROUTES, STORE } from '../constants/routes';
+import type { Product } from '../types';
+import { ROUTES } from '../constants/routes';
 import { categories } from '../data/catalog';
-import { bestSellers, dealsOfTheDay, newArrivals, products } from '../data/products';
+import { useCatalogStore, computeDealsOfTheDay, computeNewArrivals } from '../store/catalog.store';
+import { useSettingsStore, type StoreSettings } from '../store/settings.store';
 import { discountPercent, formatPriceShort } from '../utils/format';
 import { cn } from '../utils/cn';
 import { CountUp, Marquee, Reveal, Stagger, StaggerItem } from '../components/motion';
 import { ProductCard } from '../components/commerce/ProductCard';
-import { ProductImage } from '../components/commerce/ProductImage';
 import { VideoHero } from '../components/commerce/VideoHero';
-import { Seo, storeJsonLd } from '../components/seo/Seo';
+import { SectionVideoBanner } from '../components/commerce/SectionVideoBanner';
+import { RouteLoader } from '../components/brand/Loader';
+import { Seo, buildStoreJsonLd } from '../components/seo/Seo';
 
 /* ==========================================================================
    Accueil — densité marketplace.
@@ -28,7 +32,15 @@ const GRID = 'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-
 
 /* ── Bandeau promotionnel compact ─────────────────────────────────────── */
 
-function PromoBanner() {
+function PromoBanner({
+  products,
+  dealsOfTheDay,
+  settings,
+}: {
+  products: Product[];
+  dealsOfTheDay: Product[];
+  settings: StoreSettings;
+}) {
   const hero = dealsOfTheDay[0] ?? products[0];
   const discount = hero.originalPrice ? discountPercent(hero.originalPrice, hero.price) : 0;
 
@@ -45,12 +57,12 @@ function PromoBanner() {
             l'audio
           </h1>
           <p className="mt-2 max-w-lg text-body-s text-ink-secondary">
-            {STORE.city}, livré en 48 h · Garantie {STORE.warrantyMonths} mois · Orange Money, Wave,
+            {settings.city}, livré en 48 h · Garantie {settings.warrantyMonths} mois · Orange Money, Wave,
             Free Money ou paiement à la livraison.
           </p>
           <Link
             to={`${ROUTES.shop}?promo=1`}
-            className="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-md bg-accent-solid px-5 text-body-s font-semibold text-accent-fg transition-colors duration-fast hover:bg-accent-solid-hover"
+            className="mt-4 flex w-fit min-h-[44px] items-center gap-2 rounded-md bg-accent-solid px-5 text-body-s font-semibold text-accent-fg transition-colors duration-fast hover:bg-accent-solid-hover mx-auto md:mx-0"
           >
             Voir toutes les promos
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -58,11 +70,13 @@ function PromoBanner() {
         </div>
 
         {/* Étonnée, elle pointe vers le texte de l'offre à sa gauche — la
-            photo et la mise en page se répondent, ce n'est pas un hasard. */}
+            photo et la mise en page se répondent, ce n'est pas un hasard.
+            Centrée et empilée sous le texte sur mobile (grille à une seule
+            colonne) ; ancrée à droite en bas dès le passage à deux colonnes. */}
         <Link
           to={`${ROUTES.shop}?promo=1`}
           aria-label="Voir toutes les promotions"
-          className="hidden self-end -mb-6 sm:block md:-mb-8"
+          className="-mb-6 mx-auto md:mx-0 md:self-end md:-mb-8"
         >
           <img
             src="/promo-femme.webp"
@@ -80,7 +94,17 @@ function PromoBanner() {
 
 /* ── Bandeau de catégories ────────────────────────────────────────────── */
 
-function CategoryStrip() {
+/** Photos de couverture dédiées, déposées par l'utilisateur — au format
+ *  16:9 natif (960×540) : la vignette de la carte adopte ce même ratio
+ *  plutôt qu'un carré, pour ne rien recadrer. */
+const categoryCovers: Record<string, string> = {
+  smartphones: '/category-smartphones.webp',
+  audio: '/category-audio.webp',
+  accessoires: '/category-accessoires.webp',
+  'objets-connectes': '/category-objets-connectes.webp',
+};
+
+function CategoryStrip({ products }: { products: Product[] }) {
   return (
     <section className="border-b border-border-subtle">
       <div className="container-page py-6 md:py-8">
@@ -89,7 +113,6 @@ function CategoryStrip() {
             section plutôt qu'une pastille de 104px perdue dans l'espace. */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
           {categories.map((category) => {
-            const sample = products.find((p) => p.category === category.id)!;
             const count = products.filter((p) => p.category === category.id).length;
             return (
               <Link
@@ -97,10 +120,15 @@ function CategoryStrip() {
                 to={`${ROUTES.shop}?categorie=${category.id}`}
                 className="group flex flex-col overflow-hidden rounded-lg border border-border bg-elevated transition-colors hover:border-border-strong hover:shadow-2"
               >
-                <span className="flex aspect-square items-center justify-center overflow-hidden bg-sunken p-6 sm:p-8">
-                  <span className="block h-full w-full transition-transform duration-base ease-out-expo group-hover:scale-110">
-                    <ProductImage product={sample} size="thumb" />
-                  </span>
+                <span className="block aspect-video overflow-hidden bg-sunken">
+                  <img
+                    src={categoryCovers[category.id]}
+                    alt=""
+                    aria-hidden="true"
+                    width={960}
+                    height={540}
+                    className="block h-full w-full object-cover transition-transform duration-base ease-out-expo group-hover:scale-110"
+                  />
                 </span>
                 <span className="flex flex-col gap-0.5 p-4">
                   <span className="text-h4 text-ink">{category.name}</span>
@@ -154,7 +182,7 @@ function Shelf({
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   to: string;
-  items: typeof products;
+  items: Product[];
 }) {
   return (
     <section className="container-page py-6 md:py-8">
@@ -172,11 +200,11 @@ function Shelf({
 
 /* ── Bandeau de réassurance, une seule ligne ──────────────────────────── */
 
-function TrustStrip() {
+function TrustStrip({ settings }: { settings: StoreSettings }) {
   const items = [
-    { icon: ShieldCheck, text: `Garantie ${STORE.warrantyMonths} mois` },
-    { icon: Truck, text: `Livraison offerte dès ${formatPriceShort(STORE.freeShippingThreshold)}` },
-    { icon: RotateCcw, text: `Retour sous ${STORE.returnDays} jours` },
+    { icon: ShieldCheck, text: `Garantie ${settings.warrantyMonths} mois` },
+    { icon: Truck, text: `Livraison offerte dès ${formatPriceShort(settings.freeShippingThreshold)}` },
+    { icon: RotateCcw, text: `Retour sous ${settings.returnDays} jours` },
     { icon: Sparkles, text: 'Produits scellés et authentiques' },
   ];
 
@@ -222,17 +250,44 @@ function StatsStrip() {
 
 /* ── Marques ─────────────────────────────────────────────────────────── */
 
+const BRANDS = ['Apple', 'Samsung', 'Google', 'Xiaomi', 'Sony', 'JBL', 'Anker', 'Tecno', 'Infinix', 'Oppo'].map(
+  (name) => ({ name, slug: name.toLowerCase() }),
+);
+
+/** Vrai logo si présent (voir scripts/import-brand-logos.mjs), sinon repli
+ *  sur le nom de la marque en texte — même principe que ProductImage pour
+ *  les photos produit : un fichier manquant ne casse jamais l'affichage. */
+function BrandLogo({ name, slug }: { name: string; slug: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <span className="select-none text-body font-semibold text-ink-tertiary/50 transition-colors duration-base group-hover/logo:text-ink-secondary">
+        {name}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={`/brands/${slug}.webp`}
+      alt={name}
+      width={160}
+      height={80}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="h-8 w-auto object-contain"
+    />
+  );
+}
+
 function BrandStrip() {
-  const brandNames = ['Apple', 'Samsung', 'Google', 'Xiaomi', 'Sony', 'JBL', 'Anker', 'Tecno', 'Infinix', 'Oppo'];
   return (
     <section aria-label="Marques distribuées" className="border-y border-border-subtle py-4">
-      <Marquee speed={38}>
-        {brandNames.map((name) => (
-          <span
-            key={name}
-            className="select-none text-body font-semibold text-ink-tertiary/50 transition-colors duration-base hover:text-ink-secondary"
-          >
-            {name}
+      <Marquee speed={12} pauseOnHover={false}>
+        {BRANDS.map((brand) => (
+          <span key={brand.slug} className="group/logo flex shrink-0 items-center">
+            <BrandLogo name={brand.name} slug={brand.slug} />
           </span>
         ))}
       </Marquee>
@@ -243,35 +298,56 @@ function BrandStrip() {
 /* ========================================================================== */
 
 export default function Home() {
+  const products = useCatalogStore((state) => state.products);
+  const isCatalogLoaded = useCatalogStore((state) => state.isLoaded);
+  const settings = useSettingsStore((state) => state.settings);
+  const dealsOfTheDay = useMemo(() => computeDealsOfTheDay(products), [products]);
+  const newArrivals = useMemo(() => computeNewArrivals(products), [products]);
+  const jsonLd = useMemo(() => buildStoreJsonLd(settings), [settings]);
+
+  // Le catalogue vient désormais de l'API (voir catalog.store.ts) : le
+  // premier rendu peut précéder la réponse, `products` est alors vide et
+  // `PromoBanner` n'a pas de produit vedette à afficher.
+  if (!isCatalogLoaded) return <RouteLoader />;
+
   return (
     <div className={cn('overflow-x-clip')}>
       <Seo
         title="FallTech Store — Smartphones et high-tech authentiques au Sénégal"
         description="Smartphones, audio, accessoires et objets connectés authentiques à Dakar. Garantis 24 mois, livrés en 48 h partout au Sénégal. Orange Money, Wave, Free Money ou paiement à la livraison."
         path="/"
-        jsonLd={storeJsonLd}
+        jsonLd={jsonLd}
       />
 
       <VideoHero />
-      <PromoBanner />
-      <CategoryStrip />
+      <PromoBanner products={products} dealsOfTheDay={dealsOfTheDay} settings={settings} />
+      <CategoryStrip products={products} />
+
+      <SectionVideoBanner
+        to={`${ROUTES.shop}?promo=1`}
+        ariaLabel="Découvrir les bons plans du jour"
+        poster="/video/deal-poster.jpg"
+        webm="/video/deal.webm"
+        mp4="/video/deal.mp4"
+        fallbackAlt="Bons plans du jour chez FallTech Store"
+      />
 
       <Reveal effect="fade">
         <Shelf icon={Zap} title="Bons plans du jour" to={`${ROUTES.shop}?promo=1`} items={dealsOfTheDay.slice(0, 6)} />
       </Reveal>
 
-      <TrustStrip />
-
-      <Reveal effect="fade">
-        <Shelf
-          icon={Sparkles}
-          title="Meilleures ventes"
-          to={`${ROUTES.shop}?tri=pertinence`}
-          items={bestSellers.slice(0, 6)}
-        />
-      </Reveal>
+      <TrustStrip settings={settings} />
 
       <StatsStrip />
+
+      <SectionVideoBanner
+        to={`${ROUTES.shop}?tri=nouveautes`}
+        ariaLabel="Découvrir les nouveautés"
+        poster="/video/new-poster.jpg"
+        webm="/video/new.webm"
+        mp4="/video/new.mp4"
+        fallbackAlt="Nouveautés chez FallTech Store"
+      />
 
       <Reveal effect="fade">
         <Shelf

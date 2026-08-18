@@ -32,4 +32,15 @@ dist
 public/*.mp4
 public/*.mov
 public/femme.png
+public/cover *.png
+public/photo/
+public/photos/
+public/photo-marques/
+public/photo-paiement/
+
+# Backend : base de données locale, secret de session, photos importées
+# depuis l'admin (voir server/). *.local est déjà ignoré plus haut, ce qui
+# couvre jwt-secret.local.
+server/*.sqlite
+server/uploads/
 

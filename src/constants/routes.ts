@@ -13,6 +13,16 @@ export const ROUTES = {
   login: '/connexion',
   register: '/inscription',
   designSystem: '/design-system',
+
+  adminLogin: '/admin/connexion',
+  admin: '/admin',
+  adminProducts: '/admin/produits',
+  adminProductNew: '/admin/produits/nouveau',
+  adminProduct: (slug: string) => `/admin/produits/${slug}`,
+  adminProductPattern: '/admin/produits/:slug',
+  adminOrders: '/admin/commandes',
+  adminClients: '/admin/clients',
+  adminSettings: '/admin/parametres',
 } as const;
 
 export const MAIN_NAV = [

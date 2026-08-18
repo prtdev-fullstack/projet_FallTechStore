@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { ROUTES } from './constants/routes';
 import { RootLayout } from './layouts/RootLayout';
+import { AdminLayout } from './layouts/AdminLayout';
 import { RouteLoader } from './components/brand/Loader';
 
 /* ==========================================================================
@@ -37,13 +38,47 @@ const AccountProfile = lazy(() =>
   import('./pages/Account').then((m) => ({ default: m.AccountProfile })),
 );
 
+const AdminLogin = lazy(() =>
+  import('./pages/admin/AdminLogin').then((m) => ({ default: m.AdminLogin })),
+);
+const AdminDashboard = lazy(() =>
+  import('./pages/admin/AdminDashboard').then((m) => ({ default: m.AdminDashboard })),
+);
+const AdminProducts = lazy(() =>
+  import('./pages/admin/AdminProducts').then((m) => ({ default: m.AdminProducts })),
+);
+const AdminProductForm = lazy(() =>
+  import('./pages/admin/AdminProductForm').then((m) => ({ default: m.AdminProductForm })),
+);
+const AdminOrders = lazy(() =>
+  import('./pages/admin/AdminOrders').then((m) => ({ default: m.AdminOrders })),
+);
+const AdminClients = lazy(() =>
+  import('./pages/admin/AdminClients').then((m) => ({ default: m.AdminClients })),
+);
+const AdminSettings = lazy(() =>
+  import('./pages/admin/AdminSettings').then((m) => ({ default: m.AdminSettings })),
+);
+
 export default function App() {
   return (
     <BrowserRouter>
       <Suspense fallback={<RouteLoader />}>
         <Routes>
-          {/* Page autonome : elle porte son propre en-tête. */}
+          {/* Pages autonomes : elles portent leur propre en-tête. */}
           <Route path={ROUTES.designSystem} element={<DesignSystem />} />
+          <Route path={ROUTES.adminLogin} element={<AdminLogin />} />
+
+          {/* Back-office : coquille et navigation séparées de la boutique. */}
+          <Route element={<AdminLayout />}>
+            <Route path={ROUTES.admin} element={<AdminDashboard />} />
+            <Route path={ROUTES.adminProducts} element={<AdminProducts />} />
+            <Route path={ROUTES.adminProductNew} element={<AdminProductForm />} />
+            <Route path={ROUTES.adminProductPattern} element={<AdminProductForm />} />
+            <Route path={ROUTES.adminOrders} element={<AdminOrders />} />
+            <Route path={ROUTES.adminClients} element={<AdminClients />} />
+            <Route path={ROUTES.adminSettings} element={<AdminSettings />} />
+          </Route>
 
           <Route element={<RootLayout />}>
             <Route path={ROUTES.home} element={<Home />} />

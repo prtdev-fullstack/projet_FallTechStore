@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Moon, Sun, ShoppingCart, Check, Zap, Star } from 'lucide-react';
-import { useTheme } from '../hooks/useTheme';
+import { ShoppingCart, Check, Zap, Star } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { formatPrice, formatPriceCompact, formatRating } from '../utils/format';
 import { EASE, DURATION, fadeUp, staggerContainer, VIEWPORT } from '../constants/motion';
@@ -190,8 +189,6 @@ function ProductPreview() {
 /* ── Page ────────────────────────────────────────────────────────────────── */
 
 export default function DesignSystem() {
-  const { isDark, toggleTheme } = useTheme();
-
   const typeScale = [
     { cls: 'text-display-xl font-display', label: 'display-xl', spec: 'clamp(3rem → 6.5rem) · 600 · −0.03em' },
     { cls: 'text-display-l font-display', label: 'display-l', spec: 'clamp(2.25rem → 4rem) · 600' },
@@ -216,15 +213,6 @@ export default function DesignSystem() {
               Design System · v0 — Tokens
             </span>
           </div>
-
-          <button
-            onClick={toggleTheme}
-            aria-label={isDark ? 'Activer le thème clair' : 'Activer le thème sombre'}
-            className={cn(buttonBase, buttonVariants.secondary, 'px-4')}
-          >
-            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            <span className="hidden sm:inline">{isDark ? 'Thème clair' : 'Thème sombre'}</span>
-          </button>
         </div>
       </header>
 
