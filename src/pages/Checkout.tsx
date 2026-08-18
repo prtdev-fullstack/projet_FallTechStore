@@ -328,10 +328,10 @@ export default function Checkout() {
     }
 
     setSubmitting(true);
-    // Le délai simule une passerelle de paiement ; la commande, elle, est un
-    // vrai appel réseau vers l'API (POST /api/orders), pas une simulation. Les
-    // informations de carte / numéro mobile ne quittent jamais le navigateur :
-    // elles ne sont ni envoyées à l'API, ni enregistrées où que ce soit.
+    // Le délai simule une passerelle de paiement. La commande est ensuite
+    // enregistrée localement (voir orders.store.ts) : elle apparaîtra dans
+    // « Mes commandes » et dans l'admin de ce navigateur. Les informations de
+    // carte / numéro mobile, elles, ne sont ni transmises ni conservées.
     window.setTimeout(async () => {
       const reference = formatOrderNumber(Math.floor(100 + Math.random() * 8900));
 

@@ -1,58 +1,79 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Product } from '../types';
-import { api } from '../lib/api';
+import { products as catalogSeed } from '../data/products';
 
 /* ==========================================================================
-   Catalogue — servi par l'API (voir server/), plus par localStorage.
+   Catalogue — 100 % client, sans serveur.
 
-   Un produit ajouté, modifié ou supprimé depuis l'admin est maintenant
-   persisté en base côté serveur : il est visible depuis n'importe quel
-   navigateur, pas seulement celui qui a fait la modification. Le store ne
-   garde plus qu'un cache local, rafraîchi après chaque écriture.
+   Le catalogue de référence vit dans data/products.ts (photos comprises) et
+   sert de graine. Les ajouts, modifications et suppressions faits depuis
+   l'admin sont conservés dans localStorage, sur le navigateur qui les a
+   faits : c'est une démonstration, pas une vraie boutique multi-postes.
+
+   `version` : toute évolution du catalogue livrée dans le code (nouveau
+   produit, nouvelles photos) doit gagner sur la copie en cache d'un visiteur
+   déjà venu. On incrémente donc ce numéro à chaque modification de
+   data/products.ts — l'ancienne copie est alors ignorée et remplacée par la
+   nouvelle graine.
    ========================================================================== */
+
+const CATALOG_VERSION = 3;
 
 interface CatalogState {
   products: Product[];
+  /** Toujours vrai ici : conservé pour que les pages gardent le même contrat
+   *  qu'à l'époque du chargement réseau (écran de chargement, gardes). */
   isLoaded: boolean;
-  fetchProducts: () => Promise<void>;
   addProduct: (product: Product) => Promise<void>;
   updateProduct: (slug: string, patch: Partial<Product>) => Promise<void>;
   removeProduct: (slug: string) => Promise<void>;
+  resetCatalog: () => void;
 }
 
-export const useCatalogStore = create<CatalogState>()((set, get) => ({
-  products: [],
-  isLoaded: false,
+export const useCatalogStore = create<CatalogState>()(
+  persist(
+    (set, get) => ({
+      products: catalogSeed,
+      isLoaded: true,
 
-  fetchProducts: async () => {
-    const products = await api.get<Product[]>('/products');
-    set({ products, isLoaded: true });
-  },
+      /* Les trois écritures restent `async` : les pages de l'admin les
+         `await`ent déjà et gèrent un état d'envoi. Les garder asynchrones
+         évite de réécrire ces pages, et laisse la porte ouverte à un vrai
+         serveur plus tard sans nouvelle refonte. */
+      addProduct: async (product) => {
+        set({ products: [product, ...get().products] });
+      },
 
-  addProduct: async (product) => {
-    const created = await api.post<Product>('/products', product);
-    set({ products: [created, ...get().products] });
-  },
+      updateProduct: async (slug, patch) => {
+        set({
+          products: get().products.map((product) =>
+            product.slug === slug ? { ...product, ...patch } : product,
+          ),
+        });
+      },
 
-  updateProduct: async (slug, patch) => {
-    const updated = await api.put<Product>(`/products/${slug}`, patch);
-    set({ products: get().products.map((product) => (product.slug === slug ? updated : product)) });
-  },
+      removeProduct: async (slug) => {
+        set({ products: get().products.filter((product) => product.slug !== slug) });
+      },
 
-  removeProduct: async (slug) => {
-    await api.delete(`/products/${slug}`);
-    set({ products: get().products.filter((product) => product.slug !== slug) });
-  },
-}));
-
-// Chargement initial, une seule fois : les composants n'ont qu'à lire
-// `products` de façon réactive, comme avant.
-useCatalogStore.getState().fetchProducts();
+      resetCatalog: () => set({ products: catalogSeed }),
+    }),
+    {
+      name: 'falltech-catalog',
+      storage: createJSONStorage(() => localStorage),
+      version: CATALOG_VERSION,
+      partialize: (state) => ({ products: state.products }),
+      /* Version antérieure en cache : on repart de la graine livrée avec le
+         code plutôt que de tenter de fusionner deux catalogues. */
+      migrate: () => ({ products: catalogSeed }),
+    },
+  ),
+);
 
 /* ── Dérivations — fonctions pures, prennent le catalogue en argument ─────
-   Mêmes règles que l'ancien data/products.ts, mais recalculées à la demande
-   plutôt que figées au chargement du module : elles doivent réagir à chaque
-   modification faite depuis l'admin. ────────────────────────────────────── */
+   Recalculées à la demande plutôt que figées au chargement du module :
+   elles doivent réagir à chaque modification faite depuis l'admin. ─────── */
 
 export function productBySlugMap(products: Product[]): Map<string, Product> {
   return new Map(products.map((product) => [product.slug, product]));

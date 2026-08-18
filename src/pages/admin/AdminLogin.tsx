@@ -12,10 +12,10 @@ import { Seo } from '../../components/seo/Seo';
 /* ==========================================================================
    Connexion admin — écran distinct du compte client, comme /wp-admin.
 
-   Authentification réelle : le mot de passe est vérifié côté serveur contre
-   un hachage bcrypt (voir server/index.mjs), pas simulée comme le compte
-   client (auth.store.ts). Le seul compte existant est créé par
-   server/seed.ts.
+   Le site étant entièrement statique, cette vérification se fait dans le
+   navigateur (voir admin.store.ts) : c'est un garde-fou de démonstration,
+   pas une sécurité. Le bandeau en bas de l'écran le dit au visiteur plutôt
+   que de laisser croire à une protection qui n'existe pas.
    ========================================================================== */
 
 export function AdminLogin() {
@@ -110,7 +110,8 @@ export function AdminLogin() {
           <div className="mt-6 flex items-start gap-3 rounded-md border border-border bg-elevated p-4">
             <Lock className="mt-0.5 h-4 w-4 shrink-0 text-accent-text" aria-hidden="true" />
             <p className="text-caption leading-relaxed text-ink-secondary">
-              Session protégée par mot de passe, vérifié côté serveur.
+              Projet de démonstration : ce back-office fonctionne sans serveur, les données
+              restent dans ce navigateur. L'accès n'est pas une véritable protection.
             </p>
           </div>
         </Reveal>

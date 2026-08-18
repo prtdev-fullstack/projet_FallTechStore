@@ -39,6 +39,7 @@ export const products: Product[] = [
   /* ══════════════════ SMARTPHONES ══════════════════ */
   {
     slug: 'iphone-15-pro',
+    images: ["/products/iphone-15-pro-1.webp","/products/iphone-15-pro-2.webp","/products/iphone-15-pro-3.webp"],
     name: 'iPhone 15 Pro',
     brandId: 'apple',
     category: 'smartphones',
@@ -74,6 +75,7 @@ export const products: Product[] = [
   },
   {
     slug: 'iphone-15-pro-max',
+    images: ["/products/iphone-15-pro-max-1.webp","/products/iphone-15-pro-max-2.webp","/products/iphone-15-pro-max-3.webp"],
     name: 'iPhone 15 Pro Max',
     brandId: 'apple',
     category: 'smartphones',
@@ -107,6 +109,7 @@ export const products: Product[] = [
   },
   {
     slug: 'iphone-14',
+    images: ["/products/iphone-14-1.webp","/products/iphone-14-2.webp","/products/iphone-14-3.webp"],
     name: 'iPhone 14',
     brandId: 'apple',
     category: 'smartphones',
@@ -136,6 +139,7 @@ export const products: Product[] = [
   },
   {
     slug: 'iphone-13-pro',
+    images: ["/products/iphone-13-pro-1.webp","/products/iphone-13-pro-2.webp","/products/iphone-13-pro-3.webp"],
     name: 'iPhone 13 Pro',
     brandId: 'apple',
     category: 'smartphones',
@@ -169,6 +173,7 @@ export const products: Product[] = [
   },
   {
     slug: 'iphone-13',
+    images: ["/products/iphone-13-1.webp","/products/iphone-13-2.webp","/products/iphone-13-3.webp"],
     name: 'iPhone 13',
     brandId: 'apple',
     category: 'smartphones',
@@ -197,6 +202,7 @@ export const products: Product[] = [
   },
   {
     slug: 'samsung-galaxy-s24',
+    images: ["/products/samsung-galaxy-s24-1.webp","/products/samsung-galaxy-s24-2.webp","/products/samsung-galaxy-s24-3.webp"],
     name: 'Samsung Galaxy S24',
     brandId: 'samsung',
     category: 'smartphones',
@@ -226,6 +232,7 @@ export const products: Product[] = [
   },
   {
     slug: 'samsung-galaxy-s24-ultra',
+    images: ["/products/samsung-galaxy-s24-ultra-1.webp","/products/samsung-galaxy-s24-ultra-2.webp","/products/samsung-galaxy-s24-ultra-3.webp"],
     name: 'Samsung Galaxy S24 Ultra',
     brandId: 'samsung',
     category: 'smartphones',
@@ -253,6 +260,7 @@ export const products: Product[] = [
   },
   {
     slug: 'samsung-galaxy-a54',
+    images: ["/products/samsung-galaxy-a54-1.webp","/products/samsung-galaxy-a54-2.webp","/products/samsung-galaxy-a54-3.webp"],
     name: 'Samsung Galaxy A54',
     brandId: 'samsung',
     category: 'smartphones',
@@ -280,6 +288,7 @@ export const products: Product[] = [
   },
   {
     slug: 'samsung-galaxy-a55',
+    images: ["/products/samsung-galaxy-a55-1.webp","/products/samsung-galaxy-a55-2.webp","/products/samsung-galaxy-a55-3.webp"],
     name: 'Samsung Galaxy A55',
     brandId: 'samsung',
     category: 'smartphones',
@@ -306,6 +315,7 @@ export const products: Product[] = [
   },
   {
     slug: 'google-pixel-8',
+    images: ["/products/google-pixel-8-1.webp","/products/google-pixel-8-2.webp","/products/google-pixel-8-3.webp"],
     name: 'Google Pixel 8',
     brandId: 'google',
     category: 'smartphones',
@@ -333,6 +343,7 @@ export const products: Product[] = [
   },
   {
     slug: 'google-pixel-8-pro',
+    images: ["/products/google-pixel-8-pro-1.webp","/products/google-pixel-8-pro-2.webp","/products/google-pixel-8-pro-3.webp"],
     name: 'Google Pixel 8 Pro',
     brandId: 'google',
     category: 'smartphones',
@@ -360,6 +371,7 @@ export const products: Product[] = [
   },
   {
     slug: 'xiaomi-redmi-note-13-pro',
+    images: ["/products/xiaomi-redmi-note-13-pro-1.webp","/products/xiaomi-redmi-note-13-pro-2.webp","/products/xiaomi-redmi-note-13-pro-3.webp"],
     name: 'Xiaomi Redmi Note 13 Pro',
     brandId: 'xiaomi',
     category: 'smartphones',
@@ -388,6 +400,7 @@ export const products: Product[] = [
   },
   {
     slug: 'oppo-reno-11',
+    images: ["/products/oppo-reno-11-1.webp","/products/oppo-reno-11-2.webp","/products/oppo-reno-11-3.webp"],
     name: 'Oppo Reno 11',
     brandId: 'oppo',
     category: 'smartphones',
@@ -408,6 +421,7 @@ export const products: Product[] = [
   },
   {
     slug: 'tecno-camon-30',
+    images: ["/products/tecno-camon-30-1.webp","/products/tecno-camon-30-2.webp","/products/tecno-camon-30-3.webp"],
     name: 'Tecno Camon 30',
     brandId: 'tecno',
     category: 'smartphones',
@@ -429,6 +443,7 @@ export const products: Product[] = [
   },
   {
     slug: 'infinix-hot-40i',
+    images: ["/products/infinix-hot-40i-1.webp","/products/infinix-hot-40i-2.webp","/products/infinix-hot-40i-3.webp"],
     name: 'Infinix Hot 40i',
     brandId: 'infinix',
     category: 'smartphones',
@@ -450,6 +465,7 @@ export const products: Product[] = [
   },
   {
     slug: 'realme-c67',
+    images: ["/products/realme-c67-1.webp","/products/realme-c67-2.webp","/products/realme-c67-3.webp"],
     name: 'Realme C67',
     brandId: 'realme',
     category: 'smartphones',
@@ -472,6 +488,7 @@ export const products: Product[] = [
   /* ══════════════════ AUDIO ══════════════════ */
   {
     slug: 'airpods-pro',
+    images: ["/products/airpods-pro-1.webp","/products/airpods-pro-2.webp","/products/airpods-pro-3.webp"],
     name: 'AirPods Pro',
     brandId: 'apple',
     category: 'audio',
@@ -494,6 +511,7 @@ export const products: Product[] = [
   },
   {
     slug: 'airpods-pro-2',
+    images: ["/products/airpods-pro-2-1.webp","/products/airpods-pro-2-2.webp","/products/airpods-pro-2-3.webp"],
     name: 'AirPods Pro 2 (USB-C)',
     brandId: 'apple',
     category: 'audio',
@@ -516,6 +534,7 @@ export const products: Product[] = [
   },
   {
     slug: 'airpods-3',
+    images: ["/products/airpods-3-1.webp","/products/airpods-3-2.webp","/products/airpods-3-3.webp"],
     name: 'AirPods 3',
     brandId: 'apple',
     category: 'audio',
@@ -537,6 +556,7 @@ export const products: Product[] = [
   },
   {
     slug: 'galaxy-buds3-pro',
+    images: ["/products/galaxy-buds3-pro-1.webp","/products/galaxy-buds3-pro-2.webp","/products/galaxy-buds3-pro-3.webp"],
     name: 'Samsung Galaxy Buds3 Pro',
     brandId: 'samsung',
     category: 'audio',
@@ -557,6 +577,7 @@ export const products: Product[] = [
   },
   {
     slug: 'sony-wh-1000xm5',
+    images: ["/products/sony-wh-1000xm5-1.webp","/products/sony-wh-1000xm5-2.webp","/products/sony-wh-1000xm5-3.webp"],
     name: 'Sony WH-1000XM5',
     brandId: 'sony',
     category: 'audio',
@@ -579,6 +600,7 @@ export const products: Product[] = [
   },
   {
     slug: 'jbl-tune-770nc',
+    images: ["/products/jbl-tune-770nc-1.webp","/products/jbl-tune-770nc-2.webp","/products/jbl-tune-770nc-3.webp"],
     name: 'JBL Tune 770NC',
     brandId: 'jbl',
     category: 'audio',
@@ -600,6 +622,7 @@ export const products: Product[] = [
   },
   {
     slug: 'anker-soundcore-life-q30',
+    images: ["/products/anker-soundcore-life-q30-1.webp","/products/anker-soundcore-life-q30-2.webp","/products/anker-soundcore-life-q30-3.webp"],
     name: 'Anker Soundcore Life Q30',
     brandId: 'anker',
     category: 'audio',
@@ -621,6 +644,7 @@ export const products: Product[] = [
   },
   {
     slug: 'jbl-flip-6',
+    images: ["/products/jbl-flip-6-1.webp","/products/jbl-flip-6-2.webp","/products/jbl-flip-6-3.webp"],
     name: 'JBL Flip 6',
     brandId: 'jbl',
     category: 'audio',
@@ -641,6 +665,7 @@ export const products: Product[] = [
   },
   {
     slug: 'enceinte-jbl-go-4',
+    images: ["/products/enceinte-jbl-go-4-1.webp","/products/enceinte-jbl-go-4-2.webp","/products/enceinte-jbl-go-4-3.webp"],
     name: 'JBL Go 4',
     brandId: 'jbl',
     category: 'audio',
@@ -662,6 +687,7 @@ export const products: Product[] = [
   },
   {
     slug: 'ecouteurs-filaires-usb-c',
+    images: ["/products/ecouteurs-filaires-usb-c-1.webp","/products/ecouteurs-filaires-usb-c-2.webp","/products/ecouteurs-filaires-usb-c-3.webp"],
     name: 'Écouteurs filaires USB-C',
     brandId: 'anker',
     category: 'audio',
@@ -681,6 +707,7 @@ export const products: Product[] = [
   /* ══════════════════ ACCESSOIRES ══════════════════ */
   {
     slug: 'coque-iphone-15-pro',
+    images: ["/products/coque-iphone-15-pro-1.webp","/products/coque-iphone-15-pro-2.webp","/products/coque-iphone-15-pro-3.webp"],
     name: 'Coque iPhone 15 Pro',
     brandId: 'apple',
     category: 'accessoires',
@@ -701,6 +728,7 @@ export const products: Product[] = [
   },
   {
     slug: 'chargeur-sans-fil',
+    images: ["/products/chargeur-sans-fil-1.webp","/products/chargeur-sans-fil-2.webp","/products/chargeur-sans-fil-3.webp"],
     name: 'Chargeur sans fil',
     brandId: 'anker',
     category: 'accessoires',
@@ -719,6 +747,7 @@ export const products: Product[] = [
   },
   {
     slug: 'chargeur-gan-65w',
+    images: ["/products/chargeur-gan-65w-1.webp","/products/chargeur-gan-65w-2.webp","/products/chargeur-gan-65w-3.webp"],
     name: 'Chargeur GaN 65 W — 3 ports',
     brandId: 'anker',
     category: 'accessoires',
@@ -737,6 +766,7 @@ export const products: Product[] = [
   },
   {
     slug: 'batterie-externe-20000',
+    images: ["/products/batterie-externe-20000-1.webp","/products/batterie-externe-20000-2.webp","/products/batterie-externe-20000-3.webp"],
     name: 'Batterie externe 20 000 mAh',
     brandId: 'anker',
     category: 'accessoires',
@@ -756,6 +786,7 @@ export const products: Product[] = [
   },
   {
     slug: 'verre-trempe-9h',
+    images: ["/products/verre-trempe-9h-1.webp","/products/verre-trempe-9h-2.webp","/products/verre-trempe-9h-3.webp"],
     name: 'Verre trempé 9H — lot de 2',
     brandId: 'anker',
     category: 'accessoires',
@@ -783,6 +814,7 @@ export const products: Product[] = [
   },
   {
     slug: 'cable-usb-c-tresse-2m',
+    images: ["/products/cable-usb-c-tresse-2m-1.webp","/products/cable-usb-c-tresse-2m-2.webp","/products/cable-usb-c-tresse-2m-3.webp"],
     name: 'Câble USB-C tressé 2 m — 100 W',
     brandId: 'anker',
     category: 'accessoires',
@@ -800,6 +832,7 @@ export const products: Product[] = [
   },
   {
     slug: 'support-voiture-magsafe',
+    images: ["/products/support-voiture-magsafe-1.webp","/products/support-voiture-magsafe-2.webp","/products/support-voiture-magsafe-3.webp"],
     name: 'Support voiture MagSafe',
     brandId: 'anker',
     category: 'accessoires',
@@ -818,6 +851,7 @@ export const products: Product[] = [
   },
   {
     slug: 'adaptateur-usb-c-jack',
+    images: ["/products/adaptateur-usb-c-jack-1.webp","/products/adaptateur-usb-c-jack-2.webp","/products/adaptateur-usb-c-jack-3.webp"],
     name: 'Adaptateur USB-C vers jack 3,5 mm',
     brandId: 'anker',
     category: 'accessoires',
@@ -837,6 +871,7 @@ export const products: Product[] = [
   /* ══════════════════ OBJETS CONNECTÉS ══════════════════ */
   {
     slug: 'apple-watch-series-9',
+    images: ["/products/apple-watch-series-9-1.webp","/products/apple-watch-series-9-2.webp","/products/apple-watch-series-9-3.webp"],
     name: 'Apple Watch Series 9',
     brandId: 'apple',
     category: 'objets-connectes',
@@ -868,6 +903,7 @@ export const products: Product[] = [
   },
   {
     slug: 'galaxy-watch6',
+    images: ["/products/galaxy-watch6-1.webp","/products/galaxy-watch6-2.webp","/products/galaxy-watch6-3.webp"],
     name: 'Samsung Galaxy Watch6',
     brandId: 'samsung',
     category: 'objets-connectes',
@@ -899,6 +935,7 @@ export const products: Product[] = [
   },
   {
     slug: 'xiaomi-smart-band-8',
+    images: ["/products/xiaomi-smart-band-8-1.webp","/products/xiaomi-smart-band-8-2.webp","/products/xiaomi-smart-band-8-3.webp"],
     name: 'Xiaomi Smart Band 8',
     brandId: 'xiaomi',
     category: 'objets-connectes',
@@ -918,6 +955,7 @@ export const products: Product[] = [
   },
   {
     slug: 'galaxy-tab-a9',
+    images: ["/products/galaxy-tab-a9-1.webp","/products/galaxy-tab-a9-2.webp","/products/galaxy-tab-a9-3.webp"],
     name: 'Samsung Galaxy Tab A9+',
     brandId: 'samsung',
     category: 'objets-connectes',

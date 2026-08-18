@@ -5,7 +5,7 @@ import type { CategoryId } from '../../types';
 import { ROUTES } from '../../constants/routes';
 import { brands, categories } from '../../data/catalog';
 import { useCatalogStore } from '../../store/catalog.store';
-import { api, ApiError } from '../../lib/api';
+import { fileToResizedDataUrl, ImageFileError } from '../../utils/imageFile';
 import { Button, Checkbox, Input, Select, Textarea } from '../../components/ui';
 import { toast } from '../../components/ui/Toast';
 import { cn } from '../../utils/cn';
@@ -14,12 +14,12 @@ import { Seo } from '../../components/seo/Seo';
 const MAX_PHOTOS = 3;
 
 /* ── Photos : import depuis l'appareil, jusqu'à trois par produit ─────────
-   Chaque case part directement vers POST /api/uploads (traité en WebP côté
-   serveur, voir server/index.mjs) dès la sélection du fichier — pas d'étape
-   « joindre puis valider le formulaire » : l'aperçu confirme tout de suite
-   que l'import a marché, avant même d'enregistrer le produit. La première
-   case sert de couverture (carte produit, panier) ; les trois alimentent la
-   galerie de la fiche produit. */
+   Le fichier choisi est redimensionné et réencodé en WebP dans le navigateur
+   (voir utils/imageFile.ts) dès la sélection — pas d'étape « joindre puis
+   valider le formulaire » : l'aperçu confirme tout de suite que l'import a
+   marché, avant même d'enregistrer le produit. La première case sert de
+   couverture (carte produit, panier) ; les trois alimentent la galerie de la
+   fiche produit. */
 function PhotoGalleryField({
   images,
   fallbackSrc,
@@ -39,16 +39,14 @@ function PhotoGalleryField({
 
     setUploadingSlot(index);
     try {
-      const formData = new FormData();
-      formData.append('photo', file);
-      const result = await api.upload<{ url: string }>('/uploads', formData);
+      const dataUrl = await fileToResizedDataUrl(file);
       const next = [...images];
-      next[index] = result.url;
+      next[index] = dataUrl;
       onChange(next.filter(Boolean));
       toast.success('Photo importée');
     } catch (error) {
       toast.error("Échec de l'import", {
-        description: error instanceof ApiError ? error.message : undefined,
+        description: error instanceof ImageFileError ? error.message : undefined,
       });
     } finally {
       setUploadingSlot(null);
@@ -257,12 +255,20 @@ export function AdminProductForm() {
       }
       navigate(ROUTES.adminProducts);
     } catch (error) {
-      if (error instanceof ApiError && error.status === 409) {
-        setErrors({ slug: error.message });
-        return;
-      }
+      /* Le catalogue est conservé dans localStorage (voir catalog.store.ts),
+         plafonné à quelques mégaoctets : des photos importées depuis
+         l'appareil peuvent finir par le saturer. Le message générique du
+         navigateur (« Failed to execute setItem… ») n'aiderait personne. */
+      const isQuotaError =
+        error instanceof DOMException &&
+        (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED');
+
       toast.error('Échec de l’enregistrement', {
-        description: error instanceof ApiError ? error.message : undefined,
+        description: isQuotaError
+          ? 'Espace de stockage du navigateur saturé — supprimez des photos importées ou des produits ajoutés.'
+          : error instanceof Error
+            ? error.message
+            : undefined,
       });
     }
   };

@@ -1,16 +1,15 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { STORE } from '../constants/routes';
-import { api } from '../lib/api';
 
 /* ==========================================================================
-   Paramètres de la boutique — servis par l'API, plus par localStorage.
+   Paramètres de la boutique — 100 % client, sans serveur.
 
-   `constants/routes.ts` garde `STORE` comme valeur de repli, affichée le
-   temps du tout premier chargement (avant que la réponse du serveur
-   n'arrive) et comme graine pour server/seed.ts. Toute page qui affiche une
-   coordonnée de la boutique lit ce store, pas la constante statique, pour
-   qu'un changement fait dans Paramètres se reflète partout — pied de page,
-   fiche produit, tunnel de commande, JSON-LD SEO.
+   `constants/routes.ts` garde `STORE` comme valeurs par défaut. Toute page
+   qui affiche une coordonnée de la boutique lit ce store, pas la constante
+   statique, pour qu'un changement fait dans Paramètres se reflète partout —
+   pied de page, fiche produit, tunnel de commande, JSON-LD SEO. Les
+   modifications sont conservées dans localStorage, sur ce navigateur.
    ========================================================================== */
 
 /**
@@ -25,31 +24,30 @@ export type StoreSettings = { -readonly [K in keyof typeof STORE]: Widen<(typeof
 
 interface SettingsState {
   settings: StoreSettings;
+  /** Toujours vrai ici — voir le même champ dans catalog.store.ts. */
   isLoaded: boolean;
-  fetchSettings: () => Promise<void>;
   updateSettings: (patch: Partial<StoreSettings>) => Promise<void>;
   resetSettings: () => Promise<void>;
 }
 
-export const useSettingsStore = create<SettingsState>()((set) => ({
-  settings: STORE,
-  isLoaded: false,
+export const useSettingsStore = create<SettingsState>()(
+  persist(
+    (set) => ({
+      settings: STORE,
+      isLoaded: true,
 
-  fetchSettings: async () => {
-    const settings = await api.get<StoreSettings>('/settings');
-    set({ settings, isLoaded: true });
-  },
+      updateSettings: async (patch) => {
+        set((state) => ({ settings: { ...state.settings, ...patch } }));
+      },
 
-  updateSettings: async (patch) => {
-    const current = useSettingsStore.getState().settings;
-    const settings = await api.put<StoreSettings>('/settings', { ...current, ...patch });
-    set({ settings });
-  },
-
-  resetSettings: async () => {
-    const settings = await api.put<StoreSettings>('/settings', STORE);
-    set({ settings });
-  },
-}));
-
-useSettingsStore.getState().fetchSettings();
+      resetSettings: async () => {
+        set({ settings: STORE });
+      },
+    }),
+    {
+      name: 'falltech-settings',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ settings: state.settings }),
+    },
+  ),
+);

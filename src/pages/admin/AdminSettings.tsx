@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { useSettingsStore } from '../../store/settings.store';
-import { ApiError } from '../../lib/api';
 import { Button, Input } from '../../components/ui';
 import { toast } from '../../components/ui/Toast';
 import { Seo } from '../../components/seo/Seo';
@@ -33,7 +32,7 @@ export function AdminSettings() {
       toast.success('Paramètres enregistrés');
     } catch (error) {
       toast.error('Échec de l’enregistrement', {
-        description: error instanceof ApiError ? error.message : undefined,
+        description: error instanceof Error ? error.message : undefined,
       });
     }
   };

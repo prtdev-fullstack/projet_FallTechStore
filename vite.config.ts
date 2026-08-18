@@ -9,28 +9,10 @@ export default defineConfig({
   server: {
     // Port fixe : plusieurs projets tournent en dev sur cette même machine
     // (voir ~/.claude/launch.json), chacun sur un port qui lui est propre.
-    // `npm run dev` enchaînant vite et l'API via `concurrently`, un
-    // `--port` passé en CLI n'atteint jamais vite (il finit en variable
-    // d'env PORT récupérée par l'API — voir server/index.mjs) ; sans port
-    // fixe ici, vite dérive silencieusement vers un autre port dès que
+    // Sans cela, vite dérive silencieusement vers un autre port dès que
     // 5177 est occupé, ce qui cassait la prévisualisation.
     port: 5177,
     strictPort: true,
-    // L'API (Express, voir server/) tourne sur son propre port : ce proxy
-    // évite le CORS en dev et permet au cookie de session admin de rester
-    // même origine.
-    proxy: {
-      '/api': {
-        target: 'http://localhost:4310',
-        changeOrigin: true,
-      },
-      // Photos importées depuis l'admin — servies par Express, pas par Vite
-      // (voir server/index.mjs).
-      '/uploads': {
-        target: 'http://localhost:4310',
-        changeOrigin: true,
-      },
-    },
   },
   build: {
     /* Découpage manuel des dépendances.

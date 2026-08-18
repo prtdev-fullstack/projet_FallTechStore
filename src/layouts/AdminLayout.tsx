@@ -1,12 +1,9 @@
-import { useEffect } from 'react';
 import { Navigate, NavLink, Outlet } from 'react-router-dom';
 import { LayoutDashboard, LogOut, Package, Settings, ShoppingBag, Users } from 'lucide-react';
 import { ROUTES } from '../constants/routes';
 import { useAdminAuthStore } from '../store/admin.store';
-import { useOrdersStore } from '../store/orders.store';
 import { cn } from '../utils/cn';
 import { Logo } from '../components/brand/Logo';
-import { RouteLoader } from '../components/brand/Loader';
 import { toast } from '../components/ui/Toast';
 
 /* ==========================================================================
@@ -27,28 +24,12 @@ const ADMIN_NAV = [
 
 export function AdminLayout() {
   const isAuthenticated = useAdminAuthStore((state) => state.isAuthenticated);
-  const isChecking = useAdminAuthStore((state) => state.isChecking);
   const email = useAdminAuthStore((state) => state.email);
   const logout = useAdminAuthStore((state) => state.logout);
-  const checkSession = useAdminAuthStore((state) => state.checkSession);
-  const fetchOrders = useOrdersStore((state) => state.fetchOrders);
 
-  // La session vit dans un cookie httpOnly, invisible en JS : on ne sait si
-  // elle est valide qu'en interrogeant le serveur, une fois au montage.
-  useEffect(() => {
-    checkSession();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Les commandes exigent la session admin (GET /api/orders) : on ne les
-  // charge qu'une fois celle-ci confirmée, pour tout le back-office plutôt
-  // que page par page.
-  useEffect(() => {
-    if (isAuthenticated) fetchOrders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]);
-
-  if (isChecking) return <RouteLoader />;
+  // La session et les commandes vivent dans localStorage (voir admin.store /
+  // orders.store) : elles sont lues de façon synchrone à la réhydratation du
+  // store, donc rien à charger ici avant d'afficher le back-office.
   if (!isAuthenticated) return <Navigate to={ROUTES.adminLogin} replace />;
 
   return (

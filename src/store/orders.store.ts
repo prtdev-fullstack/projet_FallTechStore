@@ -1,38 +1,67 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Order } from '../types';
-import { api } from '../lib/api';
 
 /* ==========================================================================
-   Commandes — persistées côté serveur (voir server/), visibles par
-   n'importe quel navigateur admin, pas seulement celui qui les a passées.
+   Commandes — 100 % client, sans serveur.
 
-   `orders` n'est peuplé que côté admin (GET /api/orders exige la session
-   admin) : la page « Mes commandes » du compte client interroge séparément
-   GET /api/orders/by-email/:email, public, filtré par e-mail — voir
-   Account.tsx.
+   Les commandes passées depuis le tunnel sont conservées dans localStorage,
+   sur le navigateur qui les a passées : l'admin de démonstration et la page
+   « Mes commandes » du compte lisent donc la même liste locale. Une vraie
+   boutique aurait ici un serveur ; ce projet assume la démonstration.
    ========================================================================== */
 
 interface OrdersState {
   orders: Order[];
+  /** Toujours vrai ici — voir le même champ dans catalog.store.ts. */
   isLoaded: boolean;
-  fetchOrders: () => Promise<void>;
-  createOrder: (order: { id: string; total: number; lines: Order['lines']; customer: Order['customer'] }) => Promise<Order>;
+  createOrder: (order: {
+    id: string;
+    total: number;
+    lines: Order['lines'];
+    customer: Order['customer'];
+  }) => Promise<Order>;
   updateOrderStatus: (id: string, status: Order['status']) => Promise<void>;
 }
 
-export const useOrdersStore = create<OrdersState>()((set, get) => ({
-  orders: [],
-  isLoaded: false,
+export const useOrdersStore = create<OrdersState>()(
+  persist(
+    (set, get) => ({
+      orders: [],
+      isLoaded: true,
 
-  fetchOrders: async () => {
-    const orders = await api.get<Order[]>('/orders');
-    set({ orders, isLoaded: true });
-  },
+      /* `async` conservé : Checkout.tsx `await`e cet appel et affiche un état
+         d'envoi pendant la fausse latence de la passerelle de paiement. */
+      createOrder: async (input) => {
+        const order: Order = {
+          ...input,
+          date: new Date().toISOString(),
+          status: 'en-preparation',
+        };
+        set({ orders: [order, ...get().orders] });
+        return order;
+      },
 
-  createOrder: async (order) => api.post<Order>('/orders', order),
+      updateOrderStatus: async (id, status) => {
+        set({
+          orders: get().orders.map((order) => (order.id === id ? { ...order, status } : order)),
+        });
+      },
+    }),
+    {
+      name: 'falltech-orders',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ orders: state.orders }),
+    },
+  ),
+);
 
-  updateOrderStatus: async (id, status) => {
-    const updated = await api.patch<Order>(`/orders/${id}/status`, { status });
-    set({ orders: get().orders.map((order) => (order.id === id ? updated : order)) });
-  },
-}));
+/** Commandes d'un client donné, les plus récentes d'abord — utilisé par la
+ *  page « Mes commandes » du compte, qui ne doit jamais voir celles des
+ *  autres. La comparaison ignore la casse : l'e-mail saisi au tunnel n'est
+ *  pas forcément écrit comme celui du compte. */
+export function ordersByEmail(orders: Order[], email: string | undefined): Order[] {
+  if (!email) return [];
+  const needle = email.trim().toLowerCase();
+  return orders.filter((order) => order.customer.email.trim().toLowerCase() === needle);
+}
