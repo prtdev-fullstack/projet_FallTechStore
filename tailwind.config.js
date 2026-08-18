@@ -39,6 +39,11 @@ export default {
           fg: token('promo-fg'),
         },
 
+        announce: {
+          DEFAULT: token('announce'),
+          fg: token('announce-fg'),
+        },
+
         success: token('success'),
         warning: token('warning'),
         danger: token('danger'),

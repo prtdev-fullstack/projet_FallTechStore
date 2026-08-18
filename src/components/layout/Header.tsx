@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Heart, Menu, Search, ShoppingBag, User, X } from 'lucide-react';
@@ -57,7 +57,12 @@ function CartButton() {
   );
 }
 
-function MobileNav() {
+/** `topOffset` : bas réel de l'en-tête, mesuré à l'ouverture (voir Header).
+ *  Une valeur figée ne marche pas — l'en-tête fait 72 px en haut de page et
+ *  60 px une fois contracté, et le bandeau d'annonce le décale tant qu'il
+ *  n'a pas défilé. Avec la constante d'origine (60 px), le panneau démarrait
+ *  sous l'en-tête et son premier lien, « Boutique », passait dessous. */
+function MobileNav({ topOffset }: { topOffset: number }) {
   const isOpen = useUIStore((state) => state.isMobileNavOpen);
   const close = useUIStore((state) => state.closeMobileNav);
   const settings = useSettingsStore((state) => state.settings);
@@ -81,7 +86,8 @@ function MobileNav() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, pointerEvents: 'none' }}
           transition={{ duration: DURATION.fast }}
-          className="fixed inset-0 top-[var(--header-height-compact)] z-40 flex flex-col bg-canvas lg:hidden"
+          style={{ top: topOffset }}
+          className="fixed inset-x-0 bottom-0 z-40 flex flex-col bg-canvas lg:hidden"
         >
           <nav className="flex-1 overflow-y-auto px-5 py-8">
             <ul className="flex flex-col">
@@ -156,13 +162,38 @@ export function Header() {
   // navigation constant du haut de page jusqu'au pied de page.
   const hidden = isHidden && !isMobileNavOpen && !isMobile;
 
+  /* Le panneau du menu mobile se place sous l'en-tête. Sa hauteur varie (72 px
+     en haut de page, 60 px une fois contracté) et le bandeau d'annonce, qui
+     défile, décale le tout tant qu'il est visible : on mesure donc le bas réel
+     de l'en-tête à l'ouverture plutôt que de figer une valeur. */
+  const headerRef = useRef<HTMLElement>(null);
+  const [navTopOffset, setNavTopOffset] = useState(0);
+
+  useEffect(() => {
+    if (!isMobileNavOpen) return;
+
+    const measure = () => {
+      const bottom = headerRef.current?.getBoundingClientRect().bottom ?? 0;
+      setNavTopOffset(Math.max(0, Math.round(bottom)));
+    };
+
+    measure();
+    // Rotation de l'écran ou clavier virtuel : la position change sous le
+    // panneau resté ouvert.
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [isMobileNavOpen]);
+
   return (
     <>
-      {/* Bandeau d'annonce — il défile avec la page, il ne colle pas. */}
-      <div className="relative z-30 bg-elevated text-center">
-        <p className="container-page py-2 text-caption text-ink-secondary">
+      {/* Bandeau d'annonce — il défile avec la page, il ne colle pas.
+          Texte en blanc pur, sans opacité réduite : à 13 px, une opacité
+          réduite ferait tomber le contraste sous le seuil AA. La hiérarchie
+          passe donc par la graisse, pas par l'opacité. */}
+      <div className="relative z-30 bg-announce text-center">
+        <p className="container-page py-2 text-caption text-announce-fg">
           Livraison offerte dès{' '}
-          <strong className="tabular text-ink">
+          <strong className="tabular text-announce-fg">
             {formatPriceShort(settings.freeShippingThreshold)}
           </strong>{' '}
           · Garantie {settings.warrantyMonths} mois · Paiement à la livraison à Dakar
@@ -170,6 +201,7 @@ export function Header() {
       </div>
 
       <motion.header
+        ref={headerRef}
         initial={false}
         animate={{ y: hidden ? '-100%' : '0%' }}
         transition={{ duration: DURATION.base, ease: EASE.outExpo }}
@@ -280,7 +312,7 @@ export function Header() {
         </div>
       </motion.header>
 
-      <MobileNav />
+      <MobileNav topOffset={navTopOffset} />
     </>
   );
 }

@@ -60,6 +60,15 @@
   --amber-600: 224 144 16;     /* #E09010 */
 
   /* ────────────────────────────────────────────────────────────────────
+     4b. PRIMITIVE — violet électrique, réservé au bandeau d'annonce
+     Seul aplat saturé posé en haut de page. Volontairement hors des
+     familles ci-dessus : il ne doit se confondre ni avec l'accent (action)
+     ni avec l'ambre (promotion), sinon le bandeau se lirait comme un
+     bouton ou une affaire. 5.8:1 avec du texte blanc — conforme AA.
+     ──────────────────────────────────────────────────────────────────── */
+  --violet-electric: 143 0 255; /* #8F00FF */
+
+  /* ────────────────────────────────────────────────────────────────────
      5. PRIMITIVES — sémantique
      ──────────────────────────────────────────────────────────────────── */
   --success-500: 18 225 176;   /* #12E1B0 */
@@ -146,6 +155,10 @@
   /* Commerce */
   --promo: var(--amber-600);
   --promo-fg: var(--white);
+
+  /* Bandeau d'annonce (haut de page) */
+  --announce: var(--violet-electric);
+  --announce-fg: var(--white);
 
   /* Sémantique */
   --success: var(--success-500);
